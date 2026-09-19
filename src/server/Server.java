@@ -29,7 +29,6 @@ public class Server {
 
                 handleClient(clientSocket);
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
