@@ -10,39 +10,68 @@ public class Client {
         String serverIp = "100.93.142.78";
         int port = 5050;
 
-        try (
-                Socket socket = new Socket(serverIp, port);
+        try {
 
-                BufferedReader serverInput =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        socket.getInputStream()
-                                )
-                        );
+            Socket socket = new Socket(serverIp, port);
 
-                PrintWriter serverOutput =
-                        new PrintWriter(
-                                socket.getOutputStream(),
-                                true
-                        );
+            BufferedReader serverInput =
+                    new BufferedReader(
+                            new InputStreamReader(
+                                    socket.getInputStream()
+                            )
+                    );
 
-                BufferedReader keyboard =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        System.in
-                                )
-                        )
-        ) {
+            PrintWriter serverOutput =
+                    new PrintWriter(
+                            socket.getOutputStream(),
+                            true
+                    );
+
+            BufferedReader keyboard =
+                    new BufferedReader(
+                            new InputStreamReader(
+                                    System.in
+                            )
+                    );
 
             System.out.println("Connected to SyncVault Server.");
 
-            // Read server's initial messages
-            System.out.println("Server: " + serverInput.readLine());
-            System.out.println("Server: " + serverInput.readLine());
+            /*
+             * THREAD 1
+             * Continuously listens for messages from server.
+             */
+            Thread receiverThread = new Thread(() -> {
 
+                try {
+
+                    String serverMessage;
+
+                    while ((serverMessage = serverInput.readLine()) != null) {
+
+                        System.out.println(
+                                "\nSERVER: " + serverMessage
+                        );
+
+                        System.out.print("You: ");
+                    }
+
+                } catch (IOException e) {
+
+                    System.out.println(
+                            "Disconnected from server."
+                    );
+                }
+            });
+
+            receiverThread.start();
+
+            /*
+             * MAIN THREAD
+             * Continuously sends messages to server.
+             */
             while (true) {
 
-                System.out.print("\nYou: ");
+                System.out.print("You: ");
 
                 String message = keyboard.readLine();
 
@@ -52,14 +81,12 @@ public class Client {
 
                 serverOutput.println(message);
 
-                String response = serverInput.readLine();
-
-                System.out.println("Server: " + response);
-
                 if (message.equalsIgnoreCase("exit")) {
                     break;
                 }
             }
+
+            socket.close();
 
         } catch (IOException e) {
 

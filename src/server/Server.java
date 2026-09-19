@@ -27,8 +27,9 @@ public class Server {
                                 + clientSocket.getInetAddress()
                 );
 
-                handleClient(clientSocket);
+                new Thread(() -> handleClient(clientSocket)).start();
             }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -36,61 +37,78 @@ public class Server {
 
     private static void handleClient(Socket clientSocket) {
 
-        try (
-                BufferedReader input =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        clientSocket.getInputStream()
-                                )
+        try {
+
+            BufferedReader input =
+                    new BufferedReader(
+                            new InputStreamReader(
+                                    clientSocket.getInputStream()
+                            )
+                    );
+
+            PrintWriter output =
+                    new PrintWriter(
+                            clientSocket.getOutputStream(),
+                            true
+                    );
+
+            BufferedReader keyboard =
+                    new BufferedReader(
+                            new InputStreamReader(System.in)
+                    );
+
+            // SERVER RECEIVER THREAD
+            Thread receiverThread = new Thread(() -> {
+
+                try {
+
+                    String message;
+
+                    while ((message = input.readLine()) != null) {
+
+                        System.out.println(
+                                "\nCLIENT: " + message
                         );
 
-                PrintWriter output =
-                        new PrintWriter(
-                                clientSocket.getOutputStream(),
-                                true
-                        )
-        ) {
+                        System.out.print("SERVER: ");
+                    }
 
-            output.println("Connected to SyncVault Server.");
-            output.println("Type 'exit' to disconnect.");
+                } catch (IOException e) {
 
-            String message;
+                    System.out.println(
+                            "Client disconnected."
+                    );
+                }
+            });
 
-            while ((message = input.readLine()) != null) {
+            receiverThread.start();
 
-                System.out.println(
-                        "Client [" +
-                                clientSocket.getInetAddress() +
-                                "] : " +
-                                message
-                );
+            // SERVER SENDER
+            while (true) {
 
-                if (message.equalsIgnoreCase("exit")) {
+                System.out.print("SERVER: ");
 
-                    output.println("Disconnected from SyncVault Server.");
+                String message = keyboard.readLine();
+
+                if (message == null) {
                     break;
                 }
 
-                // Temporary response
-                output.println("Server received: " + message);
+                output.println(message);
+
+                if (message.equalsIgnoreCase("exit")) {
+                    break;
+                }
             }
 
-            System.out.println(
-                    "Client disconnected: "
-                            + clientSocket.getInetAddress()
-            );
+            clientSocket.close();
 
         } catch (IOException e) {
 
-            System.out.println("Client connection error: "
-                    + e.getMessage());
-
-        } finally {
-
-            try {
-                clientSocket.close();
-            } catch (IOException ignored) {
-            }
+            System.out.println(
+                    "Connection error: "
+                            + e.getMessage()
+            );
         }
     }
 }
