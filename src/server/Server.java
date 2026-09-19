@@ -11,8 +11,12 @@ public class Server {
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
 
-            System.out.println("SyncVault Server started...");
-            System.out.println("Waiting for client on port " + port);
+            System.out.println("=================================");
+            System.out.println("     SyncVault Server Started");
+            System.out.println("=================================");
+            System.out.println("Server IP: 100.93.142.78");
+            System.out.println("Port: " + port);
+            System.out.println("Waiting for clients...\n");
 
             while (true) {
 
@@ -23,6 +27,17 @@ public class Server {
                                 + clientSocket.getInetAddress()
                 );
 
+                handleClient(clientSocket);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void handleClient(Socket clientSocket) {
+
+        try (
                 BufferedReader input =
                         new BufferedReader(
                                 new InputStreamReader(
@@ -34,21 +49,49 @@ public class Server {
                         new PrintWriter(
                                 clientSocket.getOutputStream(),
                                 true
-                        );
+                        )
+        ) {
 
-                String message = input.readLine();
+            output.println("Connected to SyncVault Server.");
+            output.println("Type 'exit' to disconnect.");
 
-                System.out.println("Received: " + message);
+            String message;
 
-                output.println("Hello from Mac Server");
+            while ((message = input.readLine()) != null) {
 
-                clientSocket.close();
+                System.out.println(
+                        "Client [" +
+                                clientSocket.getInetAddress() +
+                                "] : " +
+                                message
+                );
 
-                System.out.println("Client disconnected.");
+                if (message.equalsIgnoreCase("exit")) {
+
+                    output.println("Disconnected from SyncVault Server.");
+                    break;
+                }
+
+                // Temporary response
+                output.println("Server received: " + message);
             }
 
+            System.out.println(
+                    "Client disconnected: "
+                            + clientSocket.getInetAddress()
+            );
+
         } catch (IOException e) {
-            e.printStackTrace();
+
+            System.out.println("Client connection error: "
+                    + e.getMessage());
+
+        } finally {
+
+            try {
+                clientSocket.close();
+            } catch (IOException ignored) {
+            }
         }
     }
 }
