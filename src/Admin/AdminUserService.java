@@ -156,7 +156,6 @@ public class AdminUserService {
 
         return false;
     }
-
     // deactive the user <the problem is we cannot remove the user complete from the table >
 
     public boolean deactivateUser(int userId) {
