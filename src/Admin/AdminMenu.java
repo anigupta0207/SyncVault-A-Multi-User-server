@@ -22,7 +22,8 @@ public class AdminMenu {
             System.out.println("=================================");
             System.out.println("1. View Users");
             System.out.println("2. Create User");
-            System.out.println("3. Exit");
+            System.out.println("3. Deactivate User");
+            System.out.println("4. Exit");
             System.out.println("=================================");
 
             System.out.print("Enter choice: ");
@@ -47,6 +48,13 @@ public class AdminMenu {
 
                 case "3":
 
+                    deactivateUser();
+
+                    break;
+
+
+                case "4":
+
                     System.out.println("Logging out...");
 
                     return;
@@ -60,7 +68,38 @@ public class AdminMenu {
     }
 
 
-    // INput for user
+    // ==========================================
+    // DEACTIVATE USER
+    // ==========================================
+
+    private void deactivateUser() {
+
+        System.out.println("\n=================================");
+        System.out.println("        DEACTIVATE USER");
+        System.out.println("=================================");
+
+        System.out.print("Enter User ID: ");
+
+        String input = scanner.nextLine();
+
+        try {
+
+            int userId = Integer.parseInt(input);
+
+            userService.deactivateUser(userId);
+
+        } catch (NumberFormatException e) {
+
+            System.out.println(
+                    "Invalid User ID. Please enter a number."
+            );
+        }
+    }
+
+
+    // ==========================================
+    // CREATE USER
+    // ==========================================
 
     private void createUser() {
 
@@ -77,6 +116,9 @@ public class AdminMenu {
         System.out.print("Password: ");
         String password = scanner.nextLine();
 
+
+        // Role selection
+
         System.out.println("\nAvailable roles:");
         System.out.println("1. Teacher");
         System.out.println("2. Student");
@@ -86,6 +128,7 @@ public class AdminMenu {
         String roleChoice = scanner.nextLine();
 
         String role;
+
 
         switch (roleChoice) {
 
@@ -105,10 +148,15 @@ public class AdminMenu {
 
             default:
 
-                System.out.println("Invalid role selection.");
+                System.out.println(
+                        "Invalid role selection."
+                );
 
                 return;
         }
+
+
+        // Send data to service
 
         userService.createUser(
                 name,
