@@ -1,5 +1,6 @@
 package request;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RequestTest {
@@ -9,14 +10,8 @@ public class RequestTest {
         RequestService requestService =
                 new RequestService();
 
-
-        // ==========================================
-        // GET PENDING REQUESTS
-        // ==========================================
-
         List<Request> requests =
                 requestService.getPendingRequests();
-
 
         if (requests.isEmpty()) {
 
@@ -26,11 +21,7 @@ public class RequestTest {
 
             return;
         }
-
-
-        // ==========================================
         // PRIORITY QUEUE
-        // ==========================================
 
         PriorityRequestQueue priorityQueue =
                 new PriorityRequestQueue();
@@ -40,16 +31,20 @@ public class RequestTest {
         priorityQueue.displayQueue();
 
 
-        // ==========================================
         // REQUEST PROCESSOR
-        // ==========================================
 
         RequestProcessor processor =
                 new RequestProcessor();
 
 
+        // CREATE WORKER THREADS
+
+        List<Thread> workers =
+                new ArrayList<>();
+
+
         System.out.println(
-                "\n======= STARTING REQUEST PROCESSING ======="
+                "\n======= STARTING WORKERS ======="
         );
 
 
@@ -58,12 +53,41 @@ public class RequestTest {
             Request request =
                     priorityQueue.processNextRequest();
 
-            processor.processRequest(request);
+            Thread worker =
+                    new Thread(
+                            new RequestWorker(
+                                    request,
+                                    processor
+                            )
+                    );
+
+            workers.add(worker);
+
+            worker.start();
+        }
+
+        // WAIT FOR ALL WORKERS // therading
+
+        for (Thread worker : workers) {
+
+            try {
+
+                worker.join();
+
+            } catch (InterruptedException e) {
+
+                Thread.currentThread().interrupt();
+
+                System.out.println(
+                        "Main thread interrupted."
+                );
+            }
         }
 
 
         System.out.println(
-                "\n======= ALL REQUESTS PROCESSED ======="
+                "\n======= ALL WORKERS FINISHED ======="
         );
     }
+
 }

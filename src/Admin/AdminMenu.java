@@ -68,9 +68,7 @@ public class AdminMenu {
     }
 
 
-    // ==========================================
     // DEACTIVATE USER
-    // ==========================================
 
     private void deactivateUser() {
 
@@ -96,10 +94,7 @@ public class AdminMenu {
         }
     }
 
-
-    // ==========================================
     // CREATE USER
-    // ==========================================
 
     private void createUser() {
 

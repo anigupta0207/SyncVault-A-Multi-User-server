@@ -11,10 +11,6 @@ public class RequestProcessor {
     }
 
 
-    // ==========================================
-    // PROCESS ONE REQUEST
-    // ==========================================
-
     public void processRequest(Request request) {
 
         System.out.println(
@@ -22,53 +18,47 @@ public class RequestProcessor {
         );
 
         System.out.println(
-                "Starting Request: "
+                "Thread: "
+                        + Thread.currentThread().getName()
+        );
+
+        System.out.println(
+                "Attempting Request: "
                         + request.getRequestId()
         );
 
-        System.out.println(
-                "Type: "
-                        + request.getRequestType()
-        );
 
-        System.out.println(
-                "User ID: "
-                        + request.getUserId()
-        );
+        // ==========================================
+        // CLAIM REQUEST
+        // ==========================================
 
-        System.out.println(
-                "Priority: "
-                        + request.getPriority()
-        );
-
-
-        // --------------------------------------
-        // pending → processing
-        // --------------------------------------
-
-        boolean started =
-                requestService.updateRequestStatus(
-                        request.getRequestId(),
-                        "processing"
+        boolean claimed =
+                requestService.claimRequest(
+                        request.getRequestId()
                 );
 
-        if (!started) {
+        if (!claimed) {
 
             System.out.println(
-                    "Could not start request."
+                    "Request "
+                            + request.getRequestId()
+                            + " was not processed."
             );
 
             return;
         }
 
+
         System.out.println(
-                "Status: processing"
+                "Request "
+                        + request.getRequestId()
+                        + " is now PROCESSING."
         );
 
 
-        // --------------------------------------
-        // Simulate request processing
-        // --------------------------------------
+        // ==========================================
+        // SIMULATE PROCESSING
+        // ==========================================
 
         try {
 
@@ -85,11 +75,7 @@ public class RequestProcessor {
             return;
         }
 
-
-        // --------------------------------------
-        // processing → completed
-        // --------------------------------------
-
+        // COMPLETE REQUEST
         boolean completed =
                 requestService.updateRequestStatus(
                         request.getRequestId(),
@@ -99,16 +85,20 @@ public class RequestProcessor {
         if (completed) {
 
             System.out.println(
-                    "Status: completed"
+                    "Request "
+                            + request.getRequestId()
+                            + " COMPLETED."
             );
 
         } else {
 
             System.out.println(
-                    "Request processing completed, " +
-                            "but database update failed."
+                    "Could not mark Request "
+                            + request.getRequestId()
+                            + " as completed."
             );
         }
+
 
         System.out.println(
                 "------------------------------------------"

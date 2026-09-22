@@ -1,6 +1,11 @@
 package request;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,15 +14,13 @@ public class RequestService {
     private static final String URL =
             "jdbc:mysql://localhost:3306/syncvault";
 
-    private static final String DB_USER = "root";
+    private static final String DB_USER =
+            "root";
 
     private static final String DB_PASSWORD =
             "Animesh9889";
 
-
-    // ==========================================
     // CREATE REQUEST
-    // ==========================================
 
     public boolean createRequest(
             int userId,
@@ -30,27 +33,37 @@ public class RequestService {
                         "(user_id, file_id, request_type, status, priority) " +
                         "VALUES (?, ?, ?, 'pending', ?)";
 
-        try (Connection conn =
-                     DriverManager.getConnection(
-                             URL,
-                             DB_USER,
-                             DB_PASSWORD);
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
 
-             PreparedStatement pstmt =
-                     conn.prepareStatement(query)) {
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
 
             pstmt.setInt(1, userId);
 
             if (fileId == null) {
-                pstmt.setNull(2, Types.INTEGER);
+
+                pstmt.setNull(
+                        2,
+                        Types.INTEGER
+                );
+
             } else {
+
                 pstmt.setInt(2, fileId);
             }
 
             pstmt.setString(3, requestType);
             pstmt.setInt(4, priority);
 
-            int rowsInserted = pstmt.executeUpdate();
+            int rowsInserted =
+                    pstmt.executeUpdate();
 
             if (rowsInserted == 1) {
 
@@ -74,13 +87,12 @@ public class RequestService {
     }
 
 
-    // ==========================================
     // GET PENDING REQUESTS
-    // ==========================================
 
     public List<Request> getPendingRequests() {
 
-        List<Request> requests = new ArrayList<>();
+        List<Request> requests =
+                new ArrayList<>();
 
         String query =
                 "SELECT request_id, user_id, file_id, " +
@@ -89,17 +101,20 @@ public class RequestService {
                         "WHERE status = 'pending' " +
                         "ORDER BY request_time ASC";
 
-        try (Connection conn =
-                     DriverManager.getConnection(
-                             URL,
-                             DB_USER,
-                             DB_PASSWORD);
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
 
-             PreparedStatement pstmt =
-                     conn.prepareStatement(query);
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query);
 
-             ResultSet rs =
-                     pstmt.executeQuery()) {
+                ResultSet rs =
+                        pstmt.executeQuery()
+        ) {
 
             while (rs.next()) {
 
@@ -112,15 +127,16 @@ public class RequestService {
                     fileId = databaseFileId;
                 }
 
-                Request request = new Request(
-                        rs.getInt("request_id"),
-                        rs.getInt("user_id"),
-                        fileId,
-                        rs.getString("request_type"),
-                        rs.getString("status"),
-                        rs.getInt("priority"),
-                        rs.getString("request_time")
-                );
+                Request request =
+                        new Request(
+                                rs.getInt("request_id"),
+                                rs.getInt("user_id"),
+                                fileId,
+                                rs.getString("request_type"),
+                                rs.getString("status"),
+                                rs.getInt("priority"),
+                                rs.getString("request_time")
+                        );
 
                 requests.add(request);
             }
@@ -137,11 +153,7 @@ public class RequestService {
         return requests;
     }
 
-
-    // ==========================================
     // VIEW PENDING REQUESTS
-    // ==========================================
-
     public void viewPendingRequests() {
 
         List<Request> requests =
@@ -165,6 +177,10 @@ public class RequestService {
                     "No pending requests."
             );
 
+            System.out.println(
+                    "=============================================="
+            );
+
             return;
         }
 
@@ -177,9 +193,68 @@ public class RequestService {
                 "=============================================="
         );
     }
-    // ==========================================
-// UPDATE REQUEST STATUS
-// ==========================================
+
+
+  // here claim mean where the request are pending remove it pending
+
+    public boolean claimRequest(int requestId) {
+
+        String query =
+                "UPDATE Requests " +
+                        "SET status = 'processing' " +
+                        "WHERE request_id = ? " +
+                        "AND status = 'pending'";
+
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setInt(1, requestId);
+
+            int rowsUpdated =
+                    pstmt.executeUpdate();
+
+            if (rowsUpdated == 1) {
+
+                System.out.println(
+                        "Request "
+                                + requestId
+                                + " successfully claimed."
+                );
+
+                return true;
+            }
+
+            System.out.println(
+                    "Request "
+                            + requestId
+                            + " was already claimed."
+            );
+
+            return false;
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Database error while claiming request."
+            );
+
+            e.printStackTrace();
+
+            return false;
+        }
+    }
+
+
+    // here we simply setting the request to completed
 
     public boolean updateRequestStatus(
             int requestId,
@@ -189,18 +264,22 @@ public class RequestService {
                 "UPDATE Requests " +
                         "SET status = ?, " +
                         "processed_time = CASE " +
-                        "WHEN ? = 'completed' THEN CURRENT_TIMESTAMP " +
+                        "WHEN ? = 'completed' " +
+                        "THEN CURRENT_TIMESTAMP " +
                         "ELSE processed_time END " +
                         "WHERE request_id = ?";
 
-        try (Connection conn =
-                     DriverManager.getConnection(
-                             URL,
-                             DB_USER,
-                             DB_PASSWORD);
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
 
-             PreparedStatement pstmt =
-                     conn.prepareStatement(query)) {
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
 
             pstmt.setString(1, status);
             pstmt.setString(2, status);
@@ -209,7 +288,12 @@ public class RequestService {
             int rowsUpdated =
                     pstmt.executeUpdate();
 
-            return rowsUpdated == 1;
+            if (rowsUpdated == 1) {
+
+                return true;
+            }
+
+            return false;
 
         } catch (SQLException e) {
 

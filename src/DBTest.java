@@ -13,7 +13,7 @@ public class DBTest {
 
             System.out.println("Connected to syncvault database successfully.\n");
 
-            // ---- READ TEST: confirm the seed data is there ----
+            //  READ TEST: confirm the seed data is there
             String selectQuery =
                     "SELECT u.user_id, u.name, u.email, r.role_name " +
                             "FROM Users u JOIN Roles r ON u.role_id = r.role_id";
@@ -31,7 +31,7 @@ public class DBTest {
                 }
             }
 
-            // ---- WRITE TEST: insert a new user, confirm it commits ----
+            // WRITE TEST: insert a new user, confirm it commits
             String insertQuery =
                     "INSERT INTO Users (name, email, password, role_id) VALUES (?, ?, ?, ?)";
 
@@ -45,7 +45,7 @@ public class DBTest {
                 System.out.println("\nRows inserted: " + rowsInserted);
             }
 
-            // ---- Re-read to confirm the insert actually persisted ----
+            //  Re-read to confirm the insert actually persisted
             try (Statement stmt = conn.createStatement();
                  ResultSet rs = stmt.executeQuery(selectQuery)) {
 
