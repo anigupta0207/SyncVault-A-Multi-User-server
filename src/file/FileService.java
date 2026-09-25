@@ -60,204 +60,131 @@ public class FileService {
 
     // UPLOAD FILE
 
-    public boolean uploadFile(
-            String sourceFilePath,
-            String fileName,
-            int ownerId) {
+    public boolean uploadFile(String sourceFilePath, String fileName, int ownerId) {
 
-        Path sourcePath =
-                Paths.get(sourceFilePath);
+        String insertQuery =
+                "INSERT INTO Files " +
+                        "(file_name, file_path, file_type, file_size, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?)";
 
-        if (!Files.exists(sourcePath)) {
+        String updatePathQuery =
+                "UPDATE Files SET file_path = ? WHERE file_id = ?";
 
-            System.out.println(
-                    "Source file does not exist."
-            );
+        Path sourceFile = Paths.get(sourceFilePath);
 
+        if (!Files.exists(sourceFile)) {
+            System.out.println("Source file does not exist.");
             return false;
         }
 
-
-        // Create owner-specific directory
-        Path ownerDirectory =
-                Paths.get(
-                        STORAGE_DIRECTORY,
-                        String.valueOf(ownerId)
-                );
+        long fileSize;
 
         try {
+            fileSize = Files.size(sourceFile);
+        } catch (IOException e) {
+            System.out.println("Could not determine file size.");
+            e.printStackTrace();
+            return false;
+        }
 
-            if (!Files.exists(ownerDirectory)) {
+        try (Connection conn =
+                     DriverManager.getConnection(URL, DB_USER, DB_PASSWORD);
+             PreparedStatement insertStmt =
+                     conn.prepareStatement(insertQuery,
+                             Statement.RETURN_GENERATED_KEYS)) {
 
-                Files.createDirectories(
-                        ownerDirectory
-                );
+            // Temporary path. We will update it after getting file_id.
+            insertStmt.setString(1, fileName);
+            insertStmt.setString(2, "TEMP");
+            insertStmt.setString(3, getFileType(fileName));
+            insertStmt.setLong(4, fileSize);
+            insertStmt.setInt(5, ownerId);
+
+            int rowsInserted = insertStmt.executeUpdate();
+
+            if (rowsInserted != 1) {
+                System.out.println("File metadata insertion failed.");
+                return false;
             }
 
+            int fileId;
 
-            // Destination of the actual file
-            Path destinationPath =
-                    ownerDirectory.resolve(fileName);
+            try (ResultSet rs = insertStmt.getGeneratedKeys()) {
 
-
-            // Copy file to server storage
-            Files.copy(
-                    sourcePath,
-                    destinationPath,
-                    StandardCopyOption.REPLACE_EXISTING
-            );
-
-
-            // Get file information
-            long fileSize =
-                    Files.size(destinationPath);
-
-            String fileType =
-                    getFileType(fileName);
-
-            String databasePath =
-                    destinationPath
-                            .toString()
-                            .replace("\\", "/");
-
-
-            // Insert metadata into database
-            String query =
-                    "INSERT INTO Files " +
-                            "(file_name, file_path, file_type, " +
-                            "file_size, owner_id) " +
-                            "VALUES (?, ?, ?, ?, ?)";
-
-
-            try (
-                    Connection conn =
-                            DriverManager.getConnection(
-                                    URL,
-                                    DB_USER,
-                                    DB_PASSWORD
-                            );
-
-                    PreparedStatement pstmt =
-                            conn.prepareStatement(
-                                    query,
-                                    Statement.RETURN_GENERATED_KEYS
-                            )
-            ) {
-
-                pstmt.setString(
-                        1,
-                        fileName
-                );
-
-                pstmt.setString(
-                        2,
-                        databasePath
-                );
-
-                pstmt.setString(
-                        3,
-                        fileType
-                );
-
-                pstmt.setLong(
-                        4,
-                        fileSize
-                );
-
-                pstmt.setInt(
-                        5,
-                        ownerId
-                );
-
-
-                int rowsInserted =
-                        pstmt.executeUpdate();
-
-
-                if (rowsInserted != 1) {
-
-                    System.out.println(
-                            "File metadata could not be stored."
-                    );
-
-                    // Remove copied file if DB insert failed
-                    Files.deleteIfExists(
-                            destinationPath
-                    );
-
+                if (!rs.next()) {
+                    System.out.println("Could not get generated file ID.");
                     return false;
                 }
 
-
-                try (
-                        ResultSet rs =
-                                pstmt.getGeneratedKeys()
-                ) {
-
-                    if (rs.next()) {
-
-                        System.out.println(
-                                "File uploaded successfully."
-                        );
-
-                        System.out.println(
-                                "File ID: "
-                                        + rs.getInt(1)
-                        );
-
-                        System.out.println(
-                                "File Name: "
-                                        + fileName
-                        );
-
-                        System.out.println(
-                                "Stored At: "
-                                        + databasePath
-                        );
-
-                        System.out.println(
-                                "File Size: "
-                                        + fileSize
-                                        + " bytes"
-                        );
-                    }
-                }
-
-                return true;
+                fileId = rs.getInt(1);
             }
 
-        } catch (IOException e) {
+            // Create owner directory
+            Path ownerDirectory =
+                    Paths.get(STORAGE_DIRECTORY, String.valueOf(ownerId));
 
-            System.out.println(
-                    "Error while storing file."
+            if (!Files.exists(ownerDirectory)) {
+                Files.createDirectories(ownerDirectory);
+            }
+
+            // Unique physical filename
+            String uniqueFileName = fileId + "_" + fileName;
+
+            Path destination =
+                    ownerDirectory.resolve(uniqueFileName);
+
+            // Copy physical file
+            Files.copy(
+                    sourceFile,
+                    destination,
+                    StandardCopyOption.REPLACE_EXISTING
             );
 
-            e.printStackTrace();
+            // Update database with actual physical path
+            try (PreparedStatement updateStmt =
+                         conn.prepareStatement(updatePathQuery)) {
 
-            return false;
+                updateStmt.setString(1, destination.toString());
+                updateStmt.setInt(2, fileId);
+
+                int updated = updateStmt.executeUpdate();
+
+                if (updated != 1) {
+
+                    Files.deleteIfExists(destination);
+
+                    System.out.println("Could not update file path.");
+                    return false;
+                }
+            }
+
+            System.out.println("File uploaded successfully.");
+            System.out.println("File ID: " + fileId);
+            System.out.println("File Name: " + fileName);
+            System.out.println("Stored At: " + destination);
+
+            return true;
 
         } catch (SQLException e) {
 
-            System.out.println(
-                    "Database error while storing file metadata."
-            );
-
+            System.out.println("Database error during upload.");
             e.printStackTrace();
+            return false;
 
+        } catch (IOException e) {
+
+            System.out.println("File error during upload.");
+            e.printStackTrace();
             return false;
         }
     }
-
-
     // type of file
 
     private String getFileType(String fileName) {
 
-        int lastDot =
-                fileName.lastIndexOf('.');
+        int lastDot = fileName.lastIndexOf('.');
 
-        if (lastDot == -1 ||
-                lastDot == fileName.length() - 1) {
+        if (lastDot == -1 || lastDot == fileName.length() - 1) {
 
             return "unknown";
         }
@@ -271,8 +198,7 @@ public class FileService {
 
     public List<FileInfo> getAllFiles() {
 
-        List<FileInfo> files =
-                new ArrayList<>();
+        List<FileInfo> files = new ArrayList<>();
 
         String query =
                 "SELECT file_id, file_name, file_path, " +
@@ -290,11 +216,9 @@ public class FileService {
                                 DB_PASSWORD
                         );
 
-                PreparedStatement pstmt =
-                        conn.prepareStatement(query);
+                PreparedStatement pstmt = conn.prepareStatement(query);
 
-                ResultSet rs =
-                        pstmt.executeQuery()
+                ResultSet rs = pstmt.executeQuery()
         ) {
 
             while (rs.next()) {
@@ -316,9 +240,7 @@ public class FileService {
 
         } catch (SQLException e) {
 
-            System.out.println(
-                    "Database error while retrieving files."
-            );
+            System.out.println("Database error while retrieving files.");
 
             e.printStackTrace();
         }
@@ -332,32 +254,21 @@ public class FileService {
 
     public void viewAllFiles() {
 
-        List<FileInfo> files =
-                getAllFiles();
+        List<FileInfo> files = getAllFiles();
 
 
-        System.out.println(
-                "\n=============================================="
-        );
+        System.out.println("\n==============================================");
 
-        System.out.println(
-                "                ALL FILES"
-        );
+        System.out.println("                ALL FILES");
 
-        System.out.println(
-                "=============================================="
-        );
+        System.out.println("==============================================");
 
 
         if (files.isEmpty()) {
 
-            System.out.println(
-                    "No files found."
-            );
+            System.out.println("No files found.");
 
-            System.out.println(
-                    "=============================================="
-            );
+            System.out.println("==============================================");
 
             return;
         }
@@ -369,8 +280,417 @@ public class FileService {
         }
 
 
-        System.out.println(
-                "=============================================="
-        );
+        System.out.println("==============================================");
+    }
+    // DOWNLOAD FILE portion
+
+    public boolean downloadFile(
+            int fileId,
+            String destinationPath) {
+
+        String query =
+                "SELECT file_name, file_path, status " +
+                        "FROM Files " +
+                        "WHERE file_id = ?";
+
+
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
+
+                PreparedStatement pstmt = conn.prepareStatement(query)
+        ) {
+
+            pstmt.setInt(1, fileId);
+
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+
+                if (!rs.next()) {
+                    System.out.println("File not found.");
+                    return false;
+                }
+
+
+                String fileName = rs.getString("file_name");
+
+                String filePath = rs.getString("file_path");
+
+                String status = rs.getString("status");
+
+
+                if (!"active".equalsIgnoreCase(status)) {
+
+                    System.out.println("File is not active.");
+
+                    return false;
+                }
+
+
+                Path sourcePath = Paths.get(filePath);
+
+
+                if (!Files.exists(sourcePath)) {
+
+                    System.out.println("Physical file does not exist on server.");
+
+                    return false;
+                }
+
+
+                Path destination = Paths.get(destinationPath);
+
+
+                // If destinationPath is a directory,
+                // keep the original file name.
+                if (Files.isDirectory(destination)) {
+
+                    destination = destination.resolve(fileName);
+                }
+
+
+                Path parentDirectory = destination.getParent();
+
+
+                if (parentDirectory != null && !Files.exists(parentDirectory)) {
+
+                    Files.createDirectories( parentDirectory );
+                }
+
+
+                Files.copy(
+                        sourcePath,
+                        destination,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+
+
+                System.out.println("File downloaded successfully.");
+
+                System.out.println("File ID: " + fileId );
+
+                System.out.println("File Name: " + fileName);
+
+                System.out.println( "Downloaded To: " + destination );
+
+
+                return true;
+            }
+
+        } catch (SQLException e) {
+
+            System.out.println("Database error while downloading file.");
+
+            e.printStackTrace();
+
+            return false;
+
+        } catch (IOException e) {
+
+            System.out.println("Error while copying file.");
+
+            e.printStackTrace();
+
+            return false;
+        }
+    }
+    public boolean deleteFile(int fileId) {
+
+        String selectQuery =
+                "SELECT file_path, status " +
+                        "FROM Files " +
+                        "WHERE file_id = ?";
+
+        String updateQuery =
+                "UPDATE Files " +
+                        "SET status = 'deleted' " +
+                        "WHERE file_id = ? " +
+                        "AND status = 'active'";
+
+
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
+
+                PreparedStatement selectStmt =
+                        conn.prepareStatement(selectQuery)
+        ) {
+
+            // STEP 1: FIND FILE
+
+            selectStmt.setInt(1, fileId);
+
+            String filePath;
+            String status;
+
+            try (
+                    ResultSet rs =
+                            selectStmt.executeQuery()
+            ) {
+
+                if (!rs.next()) {
+
+                    System.out.println(
+                            "File not found."
+                    );
+
+                    return false;
+                }
+
+                filePath =
+                        rs.getString("file_path");
+
+                status =
+                        rs.getString("status");
+            }
+
+
+            // STEP 2: CHECK STATUS
+
+            if (!"active".equalsIgnoreCase(status)) {
+
+                System.out.println(
+                        "File is already deleted or inactive."
+                );
+
+                return false;
+            }
+
+
+            // STEP 3: DELETE PHYSICAL FILE
+
+            Path physicalFile =
+                    Paths.get(filePath);
+
+            if (Files.exists(physicalFile)) {
+
+                Files.delete(physicalFile);
+
+                System.out.println(
+                        "Physical file deleted."
+                );
+
+            } else {
+
+                System.out.println(
+                        "Physical file was not found."
+                );
+            }
+
+
+            // STEP 4: UPDATE DATABASE STATUS
+
+            try (
+                    PreparedStatement updateStmt =
+                            conn.prepareStatement(
+                                    updateQuery
+                            )
+            ) {
+
+                updateStmt.setInt(1, fileId);
+
+                int rowsUpdated =
+                        updateStmt.executeUpdate();
+
+                if (rowsUpdated == 1) {
+
+                    System.out.println(
+                            "File status changed to DELETED."
+                    );
+
+                    return true;
+                }
+
+                System.out.println(
+                        "Could not update file status."
+                );
+
+                return false;
+            }
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Database error while deleting file."
+            );
+
+            e.printStackTrace();
+
+            return false;
+
+        } catch (IOException e) {
+
+            System.out.println(
+                    "Error while deleting physical file."
+            );
+
+            e.printStackTrace();
+
+            return false;
+        }
+    }
+
+
+// MODIFY FILE
+
+    public boolean modifyFile(
+            int fileId,
+            String newFilePath,
+            int userId) {
+
+        String selectQuery =
+                "SELECT file_path, file_name, owner_id, status " +
+                        "FROM Files " +
+                        "WHERE file_id = ?";
+
+        String updateQuery =
+                "UPDATE Files " +
+                        "SET file_size = ? " +
+                        "WHERE file_id = ? " +
+                        "AND status = 'active'";
+
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
+
+                PreparedStatement selectStmt =
+                        conn.prepareStatement(selectQuery)
+        ) {
+
+            // Find existing file
+            selectStmt.setInt(1, fileId);
+
+            String existingFilePath;
+            String fileName;
+            int ownerId;
+            String status;
+
+            try (ResultSet rs = selectStmt.executeQuery()) {
+
+                if (!rs.next()) {
+                    System.out.println("File not found.");
+                    return false;
+                }
+
+                existingFilePath = rs.getString("file_path");
+                fileName = rs.getString("file_name");
+                ownerId = rs.getInt("owner_id");
+                status = rs.getString("status");
+            }
+
+            // File must be active
+            if (!"active".equalsIgnoreCase(status)) {
+                System.out.println(
+                        "Cannot modify an inactive file."
+                );
+                return false;
+            }
+
+            // Only owner can modify for now
+            if (ownerId != userId) {
+                System.out.println(
+                        "You are not the owner of this file."
+                );
+                return false;
+            }
+
+            // Check new file
+            Path newFile = Paths.get(newFilePath);
+
+            if (!Files.exists(newFile)) {
+                System.out.println(
+                        "New file does not exist."
+                );
+                return false;
+            }
+
+            // Replace existing physical file
+            Path existingFile =
+                    Paths.get(existingFilePath);
+
+            Files.copy(
+                    newFile,
+                    existingFile,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            // Get new size
+            long newFileSize =
+                    Files.size(existingFile);
+
+            // Update database
+            try (
+                    PreparedStatement updateStmt =
+                            conn.prepareStatement(updateQuery)
+            ) {
+
+                updateStmt.setLong(1, newFileSize);
+                updateStmt.setInt(2, fileId);
+
+                int rowsUpdated =
+                        updateStmt.executeUpdate();
+
+                if (rowsUpdated == 1) {
+
+                    System.out.println(
+                            "File modified successfully."
+                    );
+
+                    System.out.println(
+                            "File ID: " + fileId
+                    );
+
+                    System.out.println(
+                            "File Name: " + fileName
+                    );
+
+                    System.out.println(
+                            "New File Size: "
+                                    + newFileSize
+                                    + " bytes"
+                    );
+
+                    return true;
+                }
+
+                System.out.println(
+                        "Could not update file metadata."
+                );
+
+                return false;
+            }
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Database error while modifying file."
+            );
+
+            e.printStackTrace();
+
+            return false;
+
+        } catch (IOException e) {
+
+            System.out.println(
+                    "Error while modifying physical file."
+            );
+
+            e.printStackTrace();
+
+            return false;
+        }
     }
 }

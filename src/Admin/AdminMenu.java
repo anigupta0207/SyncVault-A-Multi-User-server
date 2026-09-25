@@ -17,14 +17,14 @@ public class AdminMenu {
 
         while (true) {
 
-            System.out.println("\n=================================");
+            System.out.println("\n****************************************===");
             System.out.println("          SYNCVAULT ADMIN");
-            System.out.println("=================================");
+            System.out.println("****************************************===");
             System.out.println("1. View Users");
             System.out.println("2. Create User");
             System.out.println("3. Deactivate User");
             System.out.println("4. Exit");
-            System.out.println("=================================");
+            System.out.println("****************************************===");
 
             System.out.print("Enter choice: ");
 
@@ -72,9 +72,9 @@ public class AdminMenu {
 
     private void deactivateUser() {
 
-        System.out.println("\n=================================");
+        System.out.println("\n****************************************===");
         System.out.println("        DEACTIVATE USER");
-        System.out.println("=================================");
+        System.out.println("****************************************===");
 
         System.out.print("Enter User ID: ");
 
@@ -98,9 +98,7 @@ public class AdminMenu {
 
     private void createUser() {
 
-        System.out.println("\n=================================");
         System.out.println("          CREATE USER");
-        System.out.println("=================================");
 
         System.out.print("Name: ");
         String name = scanner.nextLine();
