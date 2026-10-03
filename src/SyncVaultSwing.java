@@ -1,15 +1,16 @@
 import auth.AuthenticatedUser;
 import client.ServerAuthenticationService;
+import client.FileClientService;
+import client.AdminStatsClientService;
+import file.FileInfo;
+import client.UserClientService;
+import Admin.AdminUserDataService.UserInfo;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 
-/**
- * Standalone Swing frontend prototype for SyncVault.
- * Compile: javac SyncVaultSwing.java
- * Run:     java SyncVaultSwing
- */
+import java.awt.*;
+import java.util.List;
 public class SyncVaultSwing {
     private static final Color NAVY = new Color(25, 27, 45);
     private static final Color NAVY_HI = new Color(43, 45, 70);
@@ -221,15 +222,69 @@ public class SyncVaultSwing {
     }
 
     private static JPanel dashboardContent() {
-        JPanel panel = new JPanel(new BorderLayout(14, 15)); panel.setOpaque(false);
-        JPanel stats = new JPanel(new GridLayout(1, 4, 12, 0)); stats.setOpaque(false);
-        String[][] data = role.equals("Student") ? new String[][]{{"My files","18","3 new this week"},{"Shared with me","12","From 4 teachers"},{"Submissions","6","2 awaiting review"},{"Requests","1","Access pending"}}
-                : role.equals("Teacher") ? new String[][]{{"My files","86","12 shared with classes"},{"Students","124","Across 4 classes"},{"Submissions","18","7 need review"},{"Requests","3","Awaiting response"}}
-                : new String[][]{{"Total files","1,284","Across all users"},{"Active users","42","6 joined this week"},{"Pending requests","4","2 high priority"},{"Server uptime","99.8%","All services online"}};
-        for (String[] d : data) stats.add(statCard(d[0], d[1], d[2]));
+        JPanel panel = new JPanel(new BorderLayout(14, 15));
+        panel.setOpaque(false);
+
+        JPanel stats = new JPanel(new GridLayout(1, 4, 12, 0));
+        stats.setOpaque(false);
+
+        String[][] data;
+
+        if (role.equals("Student")) {
+            data = new String[][]{
+                    {"My files", "18", "3 new this week"},
+                    {"Shared with me", "12", "From 4 teachers"},
+                    {"Submissions", "6", "2 awaiting review"},
+                    {"Requests", "1", "Access pending"}
+            };
+        } else if (role.equals("Teacher")) {
+            data = new String[][]{
+                    {"My files", "86", "12 shared with classes"},
+                    {"Students", "124", "Across 4 classes"},
+                    {"Submissions", "18", "7 need review"},
+                    {"Requests", "3", "Awaiting response"}
+            };
+        } else {
+            int totalFiles = 0;
+            int activeUsers = 0;
+            int pendingRequests = 0;
+
+            try {
+                AdminStatsClientService statsService =
+                        new AdminStatsClientService();
+
+                int[] statsData = statsService.getStats();
+
+                totalFiles = statsData[0];
+                activeUsers = statsData[1];
+                pendingRequests = statsData[2];
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            data = new String[][]{
+                    {"Total files", String.valueOf(totalFiles), "Across all users"},
+                    {"Active users", String.valueOf(activeUsers), "Currently active"},
+                    {"Pending requests", String.valueOf(pendingRequests), "Waiting for processing"},
+                    {"Server status", "ONLINE", "SyncVault server connected"}
+            };
+        }
+
+        for (String[] d : data) {
+            stats.add(statCard(d[0], d[1], d[2]));
+        }
+
         panel.add(stats, BorderLayout.NORTH);
-        JPanel lower = new JPanel(new GridLayout(1, 2, 14, 0)); lower.setOpaque(false);
-        lower.add(fileCard()); lower.add(role.equals("Admin") ? requestCard() : activityCard()); panel.add(lower, BorderLayout.CENTER); return panel;
+
+        JPanel lower = new JPanel(new GridLayout(1, 2, 14, 0));
+        lower.setOpaque(false);
+        lower.add(fileCard());
+        lower.add(role.equals("Admin") ? requestCard() : activityCard());
+
+        panel.add(lower, BorderLayout.CENTER);
+
+        return panel;
     }
 
     private static JPanel statCard(String label, String value, String hint) {
@@ -241,10 +296,113 @@ public class SyncVaultSwing {
     }
 
     private static JPanel fileCard() {
-        JPanel p = whiteCard(); p.setLayout(new BorderLayout()); p.add(cardHeader("Recent files", "Latest files in your workspace"), BorderLayout.NORTH);
-        String[] cols = {"FILE", "OWNER", "UPDATED", "ACCESS"};
-        Object[][] rows = {{"Operating Systems - Unit 3.pdf", "Dr. Maya Kim", "Today, 10:42", "Shared"}, {"DBMS lab assignment 05.docx", "Dr. Maya Kim", "Today, 9:18", "Shared"}, {"client-server-notes", "Animesh Gupta", "Yesterday", "Private"}, {"syncvault_schema.sql", "Animesh Gupta", "Sep 22", "Shared"}, {"Assignment 2 - Gupta.pdf", "Animesh Gupta", "Sep 21", "Submitted"}};
-        JTable table = table(cols, rows); p.add(new JScrollPane(table), BorderLayout.CENTER); return p;
+
+        JPanel p = whiteCard();
+        p.setLayout(new BorderLayout());
+
+        p.add(
+                cardHeader(
+                        "Files",
+                        "Files retrieved from SyncVault database"
+                ),
+                BorderLayout.NORTH
+        );
+
+        String[] columns = {
+                "ID",
+                "FILE",
+                "TYPE",
+                "SIZE",
+                "STATUS",
+                "OWNER"
+        };
+
+        DefaultTableModel model =
+                new DefaultTableModel(columns, 0) {
+
+                    @Override
+                    public boolean isCellEditable(
+                            int row,
+                            int column) {
+                        return false;
+                    }
+                };
+
+        JTable table = new JTable(model);
+
+        table.setFont(
+                new Font(
+                        "Segoe UI",
+                        Font.PLAIN,
+                        10
+                )
+        );
+
+        table.setRowHeight(38);
+        table.setFillsViewportHeight(true);
+
+        JScrollPane scrollPane =
+                new JScrollPane(table);
+
+        p.add(
+                scrollPane,
+                BorderLayout.CENTER
+        );
+
+
+        // ==========================================
+        // LOAD REAL FILES FROM SYNCVAULT SERVER
+        // ==========================================
+
+        try {
+
+            FileClientService fileClientService =
+                    new FileClientService();
+
+            List<FileInfo> files =
+                    fileClientService.getAllFiles();
+
+
+            for (FileInfo file : files) {
+
+                model.addRow(
+                        new Object[]{
+                                file.getFileId(),
+                                file.getFileName(),
+                                file.getFileType(),
+                                file.getFileSize() + " bytes",
+                                file.getStatus(),
+                                file.getOwnerId()
+                        }
+                );
+            }
+            if (files.isEmpty()) {
+
+                model.addRow(
+                        new Object[]{
+                                "-",
+                                "No files found",
+                                "-",
+                                "-",
+                                "-",
+                                "-"
+                        }
+                );
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addRow(
+                    new Object[]{
+                            "-",
+                            "ERROR: Could not load files",
+                            "-",
+                            "-",
+                            "-",
+                            "-"
+                    }
+            );
+        }
+        return p;
     }
 
     private static JPanel requestCard() {
@@ -265,8 +423,112 @@ public class SyncVaultSwing {
         if (currentPage.equals("Files") || currentPage.equals("Submissions") || currentPage.equals("File versions")) return fileCard();
         if (currentPage.equals("Requests")) return requestCard();
         if (currentPage.equals("Team & roles")) {
-            JPanel p = whiteCard(); p.setLayout(new BorderLayout()); p.add(cardHeader("Team & role management", "Accounts and access levels"), BorderLayout.NORTH);
-            p.add(new JScrollPane(table(new String[]{"MEMBER", "EMAIL", "ROLE", "STATUS"}, new Object[][]{{"Animesh Gupta", "admin@syncvault.com", "Admin", "Active"}, {"Dr. Maya Kim", "maya@syncvault.com", "Teacher", "Active"}, {"Arshita Gupta", "arshita@syncvault.com", "Student", "Active"}, {"Krishni Rastogi", "krishni@syncvault.com", "Student", "Active"}})), BorderLayout.CENTER); return p;
+
+            JPanel p = whiteCard();
+
+            p.setLayout(new BorderLayout());
+
+            p.add(
+                    cardHeader(
+                            "Team & role management",
+                            "Accounts and access levels retrieved from SyncVault"
+                    ),
+                    BorderLayout.NORTH
+            );
+
+            String[] columns = {
+                    "ID",
+                    "MEMBER",
+                    "EMAIL",
+                    "ROLE",
+                    "STATUS"
+            };
+
+            DefaultTableModel model =
+                    new DefaultTableModel(
+                            columns,
+                            0
+                    ) {
+
+                        @Override
+                        public boolean isCellEditable(
+                                int row,
+                                int column
+                        ) {
+                            return false;
+                        }
+                    };
+
+            JTable table =
+                    new JTable(model);
+
+            table.setFont(
+                    new Font(
+                            "Segoe UI",
+                            Font.PLAIN,
+                            10
+                    )
+            );
+
+            table.setRowHeight(38);
+
+            table.setFillsViewportHeight(true);
+
+            try {
+
+                UserClientService userService =
+                        new UserClientService();
+
+                List<UserInfo> users =
+                        userService.getAllUsers();
+
+                for (UserInfo user : users) {
+
+                    model.addRow(
+                            new Object[]{
+                                    user.getUserId(),
+                                    user.getName(),
+                                    user.getEmail(),
+                                    user.getRole(),
+                                    user.getStatus()
+                            }
+                    );
+                }
+
+                if (users.isEmpty()) {
+
+                    model.addRow(
+                            new Object[]{
+                                    "-",
+                                    "No users found",
+                                    "-",
+                                    "-",
+                                    "-"
+                            }
+                    );
+                }
+
+            } catch (Exception e) {
+
+                e.printStackTrace();
+
+                model.addRow(
+                        new Object[]{
+                                "-",
+                                "ERROR: Could not load users",
+                                "-",
+                                "-",
+                                "-"
+                        }
+                );
+            }
+
+            p.add(
+                    new JScrollPane(table),
+                    BorderLayout.CENTER
+            );
+
+            return p;
         }
         if (currentPage.equals("Settings")) {
             JPanel p = whiteCard(); p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS)); p.setBorder(new EmptyBorder(20, 22, 20, 22));
