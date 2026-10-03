@@ -57,7 +57,6 @@ public class AdminUserDataService {
     public List<UserInfo> getAllUsers() throws SQLException {
 
         List<UserInfo> users = new ArrayList<>();
-
         String query =
                 "SELECT u.user_id, u.name, u.email, " +
                         "r.role_name, u.status " +
@@ -91,5 +90,81 @@ public class AdminUserDataService {
         }
 
         return users;
+    }
+    public int createUser(
+            String name,
+            String email,
+            String password,
+            int roleId
+    ) throws SQLException {
+
+        String query =
+                "INSERT INTO Users " +
+                        "(name, email, password, role_id, status) " +
+                        "VALUES (?, ?, ?, ?, 'active')";
+
+        try (
+                Connection conn =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setString(1, name);
+            pstmt.setString(2, email);
+            pstmt.setString(3, password);
+            pstmt.setInt(4, roleId);
+
+            return pstmt.executeUpdate();
+        }
+    }
+    public boolean updateUserStatus(
+            int userId,
+            String status
+    ) throws SQLException {
+
+        String query =
+                "UPDATE Users " +
+                        "SET status = ? " +
+                        "WHERE user_id = ?";
+
+        try (
+                Connection conn =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setString(1, status);
+            pstmt.setInt(2, userId);
+
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+    public boolean updateUserRole(
+            int userId,
+            int roleId
+    ) throws SQLException {
+
+        String query =
+                "UPDATE Users " +
+                        "SET role_id = ? " +
+                        "WHERE user_id = ?";
+
+        try (
+                Connection conn =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setInt(1, roleId);
+            pstmt.setInt(2, userId);
+
+            return pstmt.executeUpdate() > 0;
+        }
     }
 }

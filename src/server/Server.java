@@ -66,7 +66,91 @@ public class Server {
 // =====================================================
 // HANDLE GET USERS
 // =====================================================
+private static void handleUpdateUserRole(
+        String message,
+        PrintWriter output
+) {
 
+    try {
+
+        String[] parts =
+                message.split(TAB, -1);
+
+        if (parts.length != 3) {
+
+            output.println(
+                    "UPDATE_USER_ROLE_ERROR\tInvalid request"
+            );
+
+            return;
+        }
+
+        int userId =
+                Integer.parseInt(parts[1]);
+
+        int roleId =
+                Integer.parseInt(parts[2]);
+
+        if (roleId < 1 || roleId > 3) {
+
+            output.println(
+                    "UPDATE_USER_ROLE_ERROR\tInvalid role"
+            );
+
+            return;
+        }
+
+        AdminUserDataService userService =
+                new AdminUserDataService();
+
+        boolean updated =
+                userService.updateUserRole(
+                        userId,
+                        roleId
+                );
+
+        if (updated) {
+
+            output.println(
+                    "UPDATE_USER_ROLE_OK"
+            );
+
+        } else {
+
+            output.println(
+                    "UPDATE_USER_ROLE_ERROR\tUser not found"
+            );
+        }
+
+    } catch (NumberFormatException e) {
+
+        output.println(
+                "UPDATE_USER_ROLE_ERROR\tInvalid user ID or role ID"
+        );
+
+    } catch (SQLException e) {
+
+        System.err.println(
+                "Error while updating user role: "
+                        + e.getMessage()
+        );
+
+        output.println(
+                "UPDATE_USER_ROLE_ERROR\tDatabase error"
+        );
+
+    } catch (Exception e) {
+
+        System.err.println(
+                "Unexpected error while updating user role: "
+                        + e.getMessage()
+        );
+
+        output.println(
+                "UPDATE_USER_ROLE_ERROR\tUnexpected server error"
+        );
+    }
+}
     private static void handleGetUsers(PrintWriter output) {
 
         try {
@@ -104,7 +188,73 @@ public class Server {
             output.println("USERS_END");
         }
     }
+    private static void handleCreateUser(
+            String message,
+            PrintWriter output
+    ) {
 
+        try {
+
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 5) {
+                output.println("CREATE_USER_ERROR\tInvalid request");
+                return;
+            }
+
+            String name = decode(parts[1]);
+            String email = decode(parts[2]);
+            String password = decode(parts[3]);
+            int roleId = Integer.parseInt(parts[4]);
+
+            AdminUserDataService userService =
+                    new AdminUserDataService();
+
+            int result =
+                    userService.createUser(
+                            name,
+                            email,
+                            password,
+                            roleId
+                    );
+
+            if (result > 0) {
+                output.println("CREATE_USER_OK");
+            } else {
+                output.println(
+                        "CREATE_USER_ERROR\tUser was not created"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "CREATE_USER_ERROR\tInvalid role ID"
+            );
+
+        } catch (SQLException e) {
+
+            System.err.println(
+                    "Error while creating user: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "CREATE_USER_ERROR\tDatabase error"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Unexpected error while creating user: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "CREATE_USER_ERROR\tUnexpected server error"
+            );
+        }
+    }
     // =====================================================
     // HANDLE CLIENT
     // =====================================================
@@ -178,7 +328,6 @@ public class Server {
                 return;
             }
 
-
             // ==========================================
             // GET USERS
             // ==========================================
@@ -190,6 +339,19 @@ public class Server {
                 return;
             }
 
+            if (firstMessage.startsWith("UPDATE_USER_STATUS" + TAB)) {
+                handleUpdateUserStatus(firstMessage, output);
+                return;
+            }
+
+            if (firstMessage.startsWith("CREATE_USER" + TAB)) {
+                handleCreateUser(firstMessage, output);
+                return;
+            }
+            if (firstMessage.startsWith("UPDATE_USER_ROLE" + TAB)) {
+                handleUpdateUserRole(firstMessage, output);
+                return;
+            }
 
             // ==========================================
             // NORMAL TWO-WAY CHAT
@@ -499,5 +661,102 @@ public class Server {
                         .decode(value),
                 StandardCharsets.UTF_8
         );
+    }
+    private static void handleUpdateUserStatus(
+            String message,
+            PrintWriter output
+    ) {
+
+        try {
+
+            String[] parts =
+                    message.split(TAB, -1);
+
+            if (parts.length != 3) {
+
+                output.println(
+                        "UPDATE_USER_STATUS_ERROR\tInvalid request"
+                );
+
+                return;
+            }
+
+
+            int userId =
+                    Integer.parseInt(parts[1]);
+
+            String status =
+                    decode(parts[2]);
+
+
+            if (
+                    !status.equals("active")
+                            &&
+                            !status.equals("inactive")
+            ) {
+
+                output.println(
+                        "UPDATE_USER_STATUS_ERROR\tInvalid status"
+                );
+
+                return;
+            }
+
+
+            AdminUserDataService userService =
+                    new AdminUserDataService();
+
+
+            boolean updated =
+                    userService.updateUserStatus(
+                            userId,
+                            status
+                    );
+
+
+            if (updated) {
+
+                output.println(
+                        "UPDATE_USER_STATUS_OK"
+                );
+
+            } else {
+
+                output.println(
+                        "UPDATE_USER_STATUS_ERROR\tUser not found"
+                );
+            }
+
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "UPDATE_USER_STATUS_ERROR\tInvalid user ID"
+            );
+
+
+        } catch (SQLException e) {
+
+            System.err.println(
+                    "Error while updating user status: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "UPDATE_USER_STATUS_ERROR\tDatabase error"
+            );
+
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Unexpected error while updating user status: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "UPDATE_USER_STATUS_ERROR\tUnexpected server error"
+            );
+        }
     }
 }

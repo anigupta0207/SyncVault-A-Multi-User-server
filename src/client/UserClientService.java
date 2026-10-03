@@ -116,4 +116,162 @@ public class UserClientService {
                 StandardCharsets.UTF_8
         );
     }
+    private static String encode(String value) {
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(
+                        value.getBytes(StandardCharsets.UTF_8)
+                );
+    }
+    public boolean createUser(
+            String name,
+            String email,
+            String password,
+            int roleId
+    ) throws IOException {
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(7000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    socket.getOutputStream(),
+                                    true,
+                                    StandardCharsets.UTF_8
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                String request =
+                        "CREATE_USER" + "\t" +
+                                encode(name) + "\t" +
+                                encode(email) + "\t" +
+                                encode(password) + "\t" +
+                                roleId;
+
+                output.println(request);
+
+                String response = input.readLine();
+
+                return "CREATE_USER_OK".equals(response);
+            }
+        }
+    }
+    public boolean updateUserStatus(
+            int userId,
+            String status
+    ) throws IOException {
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(7000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    socket.getOutputStream(),
+                                    true,
+                                    StandardCharsets.UTF_8
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                String request =
+                        "UPDATE_USER_STATUS" + "\t" +
+                                userId + "\t" +
+                                encode(status);
+
+                output.println(request);
+
+                String response =
+                        input.readLine();
+
+                return "UPDATE_USER_STATUS_OK"
+                        .equals(response);
+            }
+        }
+    }
+    public boolean updateUserRole(
+            int userId,
+            int roleId
+    ) throws IOException {
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(7000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    socket.getOutputStream(),
+                                    true,
+                                    StandardCharsets.UTF_8
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                String request =
+                        "UPDATE_USER_ROLE"
+                                + "\t"
+                                + userId
+                                + "\t"
+                                + roleId;
+
+                output.println(request);
+
+                String response =
+                        input.readLine();
+
+                return "UPDATE_USER_ROLE_OK"
+                        .equals(response);
+            }
+        }
+    }
 }
