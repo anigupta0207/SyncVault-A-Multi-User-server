@@ -1,5 +1,6 @@
 package Admin;
 
+import auth.AuthenticatedUser;
 import java.sql.*;
 
 public class AdminLoginService {
@@ -14,11 +15,32 @@ public class AdminLoginService {
 
     public boolean login(String email, String password) {
 
+        AuthenticatedUser user;
+        try {
+            user = authenticateUser(email, password);
+        } catch (SQLException e) {
+            System.out.println("Database error during login.");
+            e.printStackTrace();
+            return false;
+        }
+        if (user == null || !user.getRole().equalsIgnoreCase("admin")) return false;
+
+        System.out.println("Admin authenticated:");
+        System.out.println("User ID : " + user.getUserId());
+        System.out.println("Name    : " + user.getName());
+        System.out.println("Role    : " + user.getRole());
+        return true;
+    }
+
+    /** Authenticates any active role using the MySQL instance available to this server. */
+    public AuthenticatedUser authenticateUser(String email, String password) throws SQLException {
+
         String query =
-                "SELECT u.user_id, u.name, u.password, r.role_name " +
+                "SELECT u.user_id, u.name, u.email, r.role_name " +
                         "FROM Users u " +
                         "JOIN Roles r ON u.role_id = r.role_id " +
                         "WHERE u.email = ? " +
+                        "AND u.password = ? " +
                         "AND u.status = 'active'";
 
         try (Connection conn =
@@ -28,41 +50,17 @@ public class AdminLoginService {
                      conn.prepareStatement(query)) {
 
             pstmt.setString(1, email);
+            pstmt.setString(2, password);
 
             try (ResultSet rs = pstmt.executeQuery()) {
 
                 if (!rs.next()) {
-                    return false;
+                    return null;
                 }
-
-                String storedPassword = rs.getString("password");
                 String role = rs.getString("role_name");
-
-                // its temporary
-                // hashing will be add later right now we are checking the code
-                if (!storedPassword.equals(password)) {
-                    return false;
-                }
-
-                // This service is espically for admin
-                if (!role.equalsIgnoreCase("admin")) {
-                    return false;
-                }
-
-                System.out.println("Admin authenticated:");
-                System.out.println("User ID : " + rs.getInt("user_id"));
-                System.out.println("Name    : " + rs.getString("name"));
-                System.out.println("Role    : " + role);
-
-                return true;
+                return new AuthenticatedUser(rs.getInt("user_id"), rs.getString("name"),
+                        rs.getString("email"), role);
             }
-
-        } catch (SQLException e) {
-
-            System.out.println("Database error during login.");
-            e.printStackTrace();
-
-            return false;
         }
     }
 }

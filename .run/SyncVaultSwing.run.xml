@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="SyncVaultSwing" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="SyncVaultSwing" />
+    <module name="SyncVault-A-Multi-User-server" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
