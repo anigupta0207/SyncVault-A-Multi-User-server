@@ -1,7 +1,7 @@
 package client;
 
 import file.FileInfo;
-
+import file.FileShare;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -532,6 +532,94 @@ public class FileClientService {
                 return false;
             }
         }
+    }
+    public List<FileShare> getSharedFiles(int userId)
+            throws IOException {
+
+        List<FileShare> shares =
+                new ArrayList<>();
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(10000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    new OutputStreamWriter(
+                                            socket.getOutputStream(),
+                                            StandardCharsets.UTF_8
+                                    ),
+                                    true
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                output.println(
+                        "GET_SHARED_FILES"
+                                + "\t"
+                                + userId
+                );
+
+                String line;
+
+                while ((line = input.readLine()) != null) {
+
+                    if ("SHARED_FILES_END".equals(line)) {
+                        break;
+                    }
+
+                    if (line.startsWith("SHARED_FILE\t")) {
+
+                        String[] parts =
+                                line.split("\t", -1);
+
+                        if (parts.length != 7) {
+                            continue;
+                        }
+
+                        FileShare share =
+                                new FileShare(
+                                        Integer.parseInt(parts[1]),
+                                        Integer.parseInt(parts[2]),
+                                        Integer.parseInt(parts[3]),
+                                        Integer.parseInt(parts[4]),
+                                        decode(parts[5]),
+                                        decode(parts[6])
+                                );
+
+                        shares.add(share);
+                    }
+
+                    if (line.startsWith(
+                            "SHARED_FILES_ERROR")) {
+
+                        System.out.println(
+                                "Error: " + line
+                        );
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        return shares;
     }
 
 }

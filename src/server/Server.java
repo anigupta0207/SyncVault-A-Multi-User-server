@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.io.InputStream;
 import java.io.OutputStream;
 import file.FileShareService;
+import file.FileShare;
 public class Server {
 
     private static final int PORT = 5050;
@@ -706,6 +707,10 @@ private static void handleUpdateUserRole(
 
                 handleGetUsers(output);
 
+                return;
+            }
+            if (firstMessage.startsWith("GET_SHARED_FILES" + TAB)) {
+                handleGetSharedFiles(firstMessage, output);
                 return;
             }
             if (firstMessage.startsWith("SHARE_FILE" + TAB)) {
@@ -1496,6 +1501,64 @@ private static void handleUpdateUserRole(
 
             output.println(
                     "SHARE_ERROR\tDatabase error"
+            );
+        }
+    }
+    private static void handleGetSharedFiles(
+            String message,
+            PrintWriter output) {
+
+        try {
+
+            String[] parts =
+                    message.split(TAB, -1);
+
+            if (parts.length != 2) {
+                output.println(
+                        "SHARED_FILES_ERROR\tInvalid request"
+                );
+                return;
+            }
+
+            int userId =
+                    Integer.parseInt(parts[1]);
+
+            FileShareService service =
+                    new FileShareService();
+
+            List<FileShare> shares =
+                    service.getSharedFiles(userId);
+
+            for (FileShare share : shares) {
+
+                output.println(
+                        "SHARED_FILE" + TAB +
+                                share.getShareId() + TAB +
+                                share.getFileId() + TAB +
+                                share.getSharedBy() + TAB +
+                                share.getSharedWith() + TAB +
+                                encode(share.getPermission()) + TAB +
+                                encode(share.getSharedAt())
+                );
+            }
+
+            output.println("SHARED_FILES_END");
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "SHARED_FILES_ERROR\tInvalid user ID"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while retrieving shared files: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "SHARED_FILES_ERROR\tDatabase error"
             );
         }
     }
