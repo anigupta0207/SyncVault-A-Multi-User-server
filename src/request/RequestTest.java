@@ -21,7 +21,61 @@ public class RequestTest {
 
             return;
         }
-        // PRIORITY QUEUE
+
+        // ==================================================
+        // FCFS QUEUE TEST
+        // ==================================================
+
+        System.out.println(
+                "\n=============================================="
+        );
+
+        System.out.println(
+                "              FCFS QUEUE TEST"
+        );
+
+        System.out.println(
+                "=============================================="
+        );
+
+        RequestQueue fcfsQueue =
+                new RequestQueue();
+
+        fcfsQueue.addRequests(requests);
+
+        fcfsQueue.displayQueue();
+
+        System.out.println(
+                "\nFCFS PROCESSING ORDER:"
+        );
+
+        while (!fcfsQueue.isEmpty()) {
+
+            Request request =
+                    fcfsQueue.processNextRequest();
+
+            System.out.println(
+                    "Processing Request: "
+                            + request.getRequestId()
+            );
+        }
+
+
+        // ==================================================
+        // PRIORITY QUEUE TEST
+        // ==================================================
+
+        System.out.println(
+                "\n=============================================="
+        );
+
+        System.out.println(
+                "            PRIORITY QUEUE TEST"
+        );
+
+        System.out.println(
+                "=============================================="
+        );
 
         PriorityRequestQueue priorityQueue =
                 new PriorityRequestQueue();
@@ -31,17 +85,20 @@ public class RequestTest {
         priorityQueue.displayQueue();
 
 
+        // ==================================================
         // REQUEST PROCESSOR
+        // ==================================================
 
         RequestProcessor processor =
                 new RequestProcessor();
 
 
+        // ==================================================
         // CREATE WORKER THREADS
+        // ==================================================
 
         List<Thread> workers =
                 new ArrayList<>();
-
 
         System.out.println(
                 "\n======= STARTING WORKERS ======="
@@ -66,7 +123,10 @@ public class RequestTest {
             worker.start();
         }
 
-        // WAIT FOR ALL WORKERS // therading
+
+        // ==================================================
+        // WAIT FOR ALL WORKERS
+        // ==================================================
 
         for (Thread worker : workers) {
 
@@ -89,5 +149,4 @@ public class RequestTest {
                 "\n======= ALL WORKERS FINISHED ======="
         );
     }
-
 }
