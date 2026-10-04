@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import file.FileShareService;
 import file.FileShare;
+import request.SubmissionService;
 public class Server {
 
     private static final int PORT = 5050;
@@ -702,7 +703,10 @@ private static void handleUpdateUserRole(
             // ==========================================
             // GET USERS
             // ==========================================
-
+            if (firstMessage.startsWith("SUBMIT_FILE" + TAB)) {
+                handleSubmitFile(firstMessage, output);
+                return;
+            }
             if (firstMessage.equals("GET_USERS")) {
 
                 handleGetUsers(output);
@@ -1561,6 +1565,52 @@ private static void handleUpdateUserRole(
 
             output.println(
                     "SHARED_FILES_ERROR\tDatabase error"
+            );
+        }
+    }
+    private static void handleSubmitFile(
+            String message,
+            PrintWriter output) {
+
+        try {
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 4) {
+                output.println("SUBMIT_ERROR\tInvalid request");
+                return;
+            }
+
+            int studentId = Integer.parseInt(parts[1]);
+            int fileId = Integer.parseInt(parts[2]);
+            int priority = Integer.parseInt(parts[3]);
+
+            SubmissionService service = new SubmissionService();
+
+            boolean success = service.submitFile(
+                    studentId,
+                    fileId,
+                    priority
+            );
+
+            if (success) {
+                output.println("SUBMIT_OK");
+            } else {
+                output.println("SUBMIT_ERROR\tSubmission failed");
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println("SUBMIT_ERROR\tInvalid ID or priority");
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while submitting file: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "SUBMIT_ERROR\tServer error"
             );
         }
     }

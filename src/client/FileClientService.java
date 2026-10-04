@@ -626,5 +626,68 @@ public class FileClientService {
 
         return shares;
     }
+    public boolean submitFile(
+            int studentId,
+            int fileId,
+            int priority) {
+
+        try (
+                Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
+
+                BufferedReader input =
+                        new BufferedReader(
+                                new InputStreamReader(
+                                        socket.getInputStream()
+                                )
+                        );
+
+                PrintWriter output =
+                        new PrintWriter(
+                                socket.getOutputStream(),
+                                true
+                        )
+        ) {
+
+            output.println(
+                    "SUBMIT_FILE"
+                            + "\t"
+                            + studentId
+                            + "\t"
+                            + fileId
+                            + "\t"
+                            + priority
+            );
+
+            String response = input.readLine();
+
+            if ("SUBMIT_OK".equals(response)) {
+
+                System.out.println(
+                        "File submitted successfully."
+                );
+
+                return true;
+            }
+
+            if (response != null &&
+                    response.startsWith("SUBMIT_ERROR")) {
+
+                System.out.println(
+                        "Submission failed: "
+                                + response
+                );
+            }
+
+        } catch (IOException e) {
+
+            System.out.println(
+                    "Connection error while submitting file."
+            );
+
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 
 }
