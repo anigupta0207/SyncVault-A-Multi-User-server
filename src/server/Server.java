@@ -17,7 +17,8 @@ import java.util.Base64;
 import java.util.List;
 import request.Request;
 import request.RequestService;
-
+import java.io.FileOutputStream;
+import java.nio.file.Path;
 public class Server {
 
     private static final int PORT = 5050;
@@ -257,6 +258,195 @@ private static void handleUpdateUserRole(
             );
         }
     }
+    private static void handleUploadFile(
+            String firstMessage,
+            BufferedReader input,
+            PrintWriter output) {
+
+        Path tempFile = null;
+
+        try {
+
+            String[] parts =
+                    firstMessage.split(TAB, -1);
+
+            if (parts.length != 4) {
+
+                output.println(
+                        "UPLOAD_ERROR\tInvalid request"
+                );
+
+                return;
+            }
+
+            int ownerId =
+                    Integer.parseInt(parts[1]);
+
+            String fileName =
+                    decode(parts[2]);
+
+            long expectedSize =
+                    Long.parseLong(parts[3]);
+
+            if (expectedSize < 0) {
+
+                output.println(
+                        "UPLOAD_ERROR\tInvalid file size"
+                );
+
+                return;
+            }
+
+            /*
+             * Create temporary server-side file.
+             */
+            Path tempDirectory =
+                    java.nio.file.Paths.get(
+                            "storage",
+                            "temp"
+                    );
+
+            java.nio.file.Files.createDirectories(
+                    tempDirectory
+            );
+
+            tempFile =
+                    java.nio.file.Files.createTempFile(
+                            tempDirectory,
+                            "upload_",
+                            "_" + fileName
+                    );
+
+            long receivedBytes = 0;
+
+            try (FileOutputStream fileOutput =
+                         new FileOutputStream(
+                                 tempFile.toFile()
+                         )) {
+
+                while (true) {
+
+                    String message =
+                            input.readLine();
+
+                    if (message == null) {
+
+                        throw new IOException(
+                                "Client disconnected during upload"
+                        );
+                    }
+
+                    if (message.equals("UPLOAD_END")) {
+                        break;
+                    }
+
+                    if (!message.startsWith("DATA" + TAB)) {
+
+                        throw new IOException(
+                                "Invalid upload data"
+                        );
+                    }
+
+                    String encodedData =
+                            message.substring(5);
+
+                    byte[] chunk =
+                            Base64.getDecoder()
+                                    .decode(encodedData);
+
+                    fileOutput.write(chunk);
+
+                    receivedBytes += chunk.length;
+
+                    if (receivedBytes > expectedSize) {
+
+                        throw new IOException(
+                                "Received more data than expected"
+                        );
+                    }
+                }
+            }
+
+            /*
+             * Verify file size.
+             */
+            if (receivedBytes != expectedSize) {
+
+                output.println(
+                        "UPLOAD_ERROR\tFile size mismatch"
+                );
+
+                return;
+            }
+
+            /*
+             * Pass temporary file to existing FileService.
+             */
+            FileService fileService =
+                    new FileService();
+
+            boolean uploaded =
+                    fileService.uploadFile(
+                            tempFile.toString(),
+                            fileName,
+                            ownerId
+                    );
+
+            if (uploaded) {
+
+                output.println("UPLOAD_OK");
+
+                System.out.println(
+                        "File uploaded from client: "
+                                + fileName
+                );
+
+            } else {
+
+                output.println(
+                        "UPLOAD_ERROR\tFileService failed"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "UPLOAD_ERROR\tInvalid number"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error during file upload: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "UPLOAD_ERROR\t"
+                            + e.getMessage()
+            );
+
+        } finally {
+
+            /*
+             * Remove temporary file.
+             */
+            if (tempFile != null) {
+
+                try {
+
+                    java.nio.file.Files.deleteIfExists(tempFile);
+
+                } catch (IOException e) {
+
+                    System.err.println(
+                            "Could not delete temporary upload file: "
+                                    + e.getMessage()
+                    );
+                }
+            }
+        }
+    }
     // =====================================================
     // HANDLE CLIENT
     // =====================================================
@@ -306,7 +496,20 @@ private static void handleUpdateUserRole(
                 return;
             }
 
+            // ==========================================
+            // UPLOAD FILE
+            // ==========================================
 
+            if (firstMessage.startsWith("UPLOAD_FILE" + TAB)) {
+
+                handleUploadFile(
+                        firstMessage,
+                        input,
+                        output
+                );
+
+                return;
+            }
             // ==========================================
             // GET FILES
             // ==========================================
@@ -731,6 +934,7 @@ private static void handleUpdateUserRole(
                         "FILE" + TAB +
 
                                 file.getFileId() + TAB +
+
 
                                 encode(
                                         file.getFileName()
