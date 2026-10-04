@@ -675,22 +675,18 @@ private static void handleUpdateUserRole(
             }
 
 
+            String sessionToken =
+                    SessionManager.createSession(user);
+
             output.println(
                     String.join(
                             TAB,
                             "AUTH_OK",
-                            String.valueOf(
-                                    user.getUserId()
-                            ),
-                            encode(
-                                    user.getName()
-                            ),
-                            encode(
-                                    user.getEmail()
-                            ),
-                            encode(
-                                    user.getRole()
-                            )
+                            String.valueOf(user.getUserId()),
+                            encode(user.getName()),
+                            encode(user.getEmail()),
+                            encode(user.getRole()),
+                            encode(sessionToken)
                     )
             );
 

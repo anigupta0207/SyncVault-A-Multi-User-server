@@ -35,11 +35,16 @@ public class ServerAuthenticationService {
                 String[] fields = response.split("\\t", -1);
                 if (fields[0].equals("AUTH_FAIL")) return null;
                 if (fields[0].equals("DB_ERROR")) throw new IOException("The SyncVault server could not access its MySQL database.");
-                if (fields.length != 5 || !fields[0].equals("AUTH_OK")) {
+                if (fields.length != 6 || !fields[0].equals("AUTH_OK")) {
                     throw new IOException("The SyncVault server returned an unsupported login response.");
                 }
-                return new AuthenticatedUser(Integer.parseInt(fields[1]), decode(fields[2]), decode(fields[3]), decode(fields[4]));
-            }
+                return new AuthenticatedUser(
+                        Integer.parseInt(fields[1]),
+                        decode(fields[2]),
+                        decode(fields[3]),
+                        decode(fields[4]),
+                        decode(fields[5])
+                );}
         }
     }
 

@@ -14,7 +14,7 @@ import javax.swing.table.DefaultTableModel;
 
 import java.awt.*;
 import java.util.List;
-
+import client.Session;
 public class SyncVaultSwing {
 
     private static final Color NAVY = new Color(25, 27, 45);
@@ -538,7 +538,7 @@ public class SyncVaultSwing {
 
                     return;
                 }
-
+                Session.setUser(authenticated);
 
                 email =
                         authenticated.getEmail();
@@ -1170,7 +1170,7 @@ public class SyncVaultSwing {
                 e -> {
 
                     role = "User";
-
+                    Session.clear();
                     email = "";
 
                     currentUserName = "";
