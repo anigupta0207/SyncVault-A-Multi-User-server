@@ -132,6 +132,74 @@ public class RequestClientService {
         return requests;
     }
 
+    public boolean createRequest(
+            int userId,
+            Integer fileId,
+            String requestType,
+            int priority
+    ) throws IOException {
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(7000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    socket.getOutputStream(),
+                                    true,
+                                    StandardCharsets.UTF_8
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                String fileIdValue =
+                        fileId == null
+                                ? ""
+                                : String.valueOf(fileId);
+
+                String request =
+                        "CREATE_REQUEST" + "\t" +
+                                userId + "\t" +
+                                fileIdValue + "\t" +
+                                encode(requestType) + "\t" +
+                                priority;
+
+                output.println(request);
+
+                String response =
+                        input.readLine();
+
+                return "CREATE_REQUEST_OK"
+                        .equals(response);
+            }
+        }
+    }
+
+    private static String encode(String value) {
+
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(
+                        value.getBytes(StandardCharsets.UTF_8)
+                );
+    }
+
     private static String decode(String value) {
 
         return new String(

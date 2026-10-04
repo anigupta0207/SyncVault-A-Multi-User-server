@@ -5,6 +5,8 @@ import client.AdminStatsClientService;
 import client.UserClientService;
 import file.FileInfo;
 import Admin.AdminUserDataService.UserInfo;
+import client.RequestClientService;
+import request.Request;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -2052,15 +2054,14 @@ public class SyncVaultSwing {
     // REQUEST CARD
     // =========================================================
 
+
+
+
     private static JPanel requestCard() {
 
-        JPanel p =
-                whiteCard();
+        JPanel p = whiteCard();
 
-        p.setLayout(
-                new BorderLayout()
-        );
-
+        p.setLayout(new BorderLayout());
 
         p.add(
                 cardHeader(
@@ -2070,7 +2071,6 @@ public class SyncVaultSwing {
                 BorderLayout.NORTH
         );
 
-
         String[] cols = {
                 "ID",
                 "OPERATION",
@@ -2079,42 +2079,57 @@ public class SyncVaultSwing {
                 "STATUS"
         };
 
+        Object[][] rows;
 
-        Object[][] rows = {
+        try {
 
-                {
-                        "RQ-1042",
-                        "File access",
-                        "Arshita Gupta",
-                        "High",
-                        "Pending"
-                },
+            RequestClientService service =
+                    new RequestClientService();
 
-                {
-                        "RQ-1043",
-                        "Upload file",
-                        "Animesh Gupta",
-                        "Normal",
-                        "Processing"
-                },
+            List<Request> requests =
+                    service.getPendingRequests();
 
-                {
-                        "RQ-1044",
-                        "Share file",
-                        "Krishni Rastogi",
-                        "Normal",
-                        "Pending"
-                },
+            rows = new Object[requests.size()][5];
 
-                {
-                        "RQ-1045",
-                        "Download",
-                        "Prashasti Rai",
-                        "Low",
-                        "Pending"
-                }
-        };
+            for (int i = 0; i < requests.size(); i++) {
 
+                Request request =
+                        requests.get(i);
+
+                rows[i][0] =
+                        "RQ-" + request.getRequestId();
+
+                rows[i][1] =
+                        request.getRequestType();
+
+                rows[i][2] =
+                        "User #" + request.getUserId();
+
+                rows[i][3] =
+                        priorityText(
+                                request.getPriority()
+                        );
+
+                rows[i][4] =
+                        capitalize(
+                                request.getStatus()
+                        );
+            }
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            rows = new Object[][]{
+                    {
+                            "-",
+                            "Unable to load requests",
+                            "-",
+                            "-",
+                            "Error"
+                    }
+            };
+        }
 
         p.add(
                 new JScrollPane(
@@ -2126,10 +2141,31 @@ public class SyncVaultSwing {
                 BorderLayout.CENTER
         );
 
-
         return p;
     }
 
+    private static String priorityText(int priority) {
+
+        if (priority >= 5) {
+            return "High";
+        }
+
+        if (priority >= 3) {
+            return "Normal";
+        }
+
+        return "Low";
+    }
+
+    private static String capitalize(String value) {
+
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        return value.substring(0, 1).toUpperCase()
+                + value.substring(1).toLowerCase();
+    }
 
     // =========================================================
     // ACTIVITY CARD

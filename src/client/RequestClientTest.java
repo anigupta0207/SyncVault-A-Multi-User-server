@@ -13,6 +13,38 @@ public class RequestClientTest {
             RequestClientService service =
                     new RequestClientService();
 
+            System.out.println(
+                    "Creating test request..."
+            );
+
+            boolean created =
+                    service.createRequest(
+                            2,          // user ID
+                            null,       // file ID
+                            "DOWNLOAD",
+                            3           // priority
+                    );
+
+            if (created) {
+
+                System.out.println(
+                        "CREATE_REQUEST successful!"
+                );
+
+            } else {
+
+                System.out.println(
+                        "CREATE_REQUEST failed."
+                );
+
+                return;
+            }
+
+            System.out.println();
+            System.out.println(
+                    "Fetching pending requests..."
+            );
+
             List<Request> requests =
                     service.getPendingRequests();
 
@@ -28,61 +60,52 @@ public class RequestClientTest {
                     "================================="
             );
 
-            if (requests.isEmpty()) {
+            for (Request request : requests) {
 
                 System.out.println(
-                        "No pending requests found."
+                        "Request ID : "
+                                + request.getRequestId()
                 );
 
-            } else {
+                System.out.println(
+                        "User ID    : "
+                                + request.getUserId()
+                );
 
-                for (Request request : requests) {
+                System.out.println(
+                        "File ID    : "
+                                + request.getFileId()
+                );
 
-                    System.out.println(
-                            "Request ID : "
-                                    + request.getRequestId()
-                    );
+                System.out.println(
+                        "Type       : "
+                                + request.getRequestType()
+                );
 
-                    System.out.println(
-                            "User ID    : "
-                                    + request.getUserId()
-                    );
+                System.out.println(
+                        "Status     : "
+                                + request.getStatus()
+                );
 
-                    System.out.println(
-                            "File ID    : "
-                                    + request.getFileId()
-                    );
+                System.out.println(
+                        "Priority   : "
+                                + request.getPriority()
+                );
 
-                    System.out.println(
-                            "Type       : "
-                                    + request.getRequestType()
-                    );
+                System.out.println(
+                        "Time       : "
+                                + request.getRequestTime()
+                );
 
-                    System.out.println(
-                            "Status     : "
-                                    + request.getStatus()
-                    );
-
-                    System.out.println(
-                            "Priority   : "
-                                    + request.getPriority()
-                    );
-
-                    System.out.println(
-                            "Time       : "
-                                    + request.getRequestTime()
-                    );
-
-                    System.out.println(
-                            "---------------------------------"
-                    );
-                }
+                System.out.println(
+                        "---------------------------------"
+                );
             }
-//comment
+
         } catch (Exception e) {
 
             System.out.println(
-                    "Failed to retrieve requests."
+                    "Request test failed."
             );
 
             e.printStackTrace();

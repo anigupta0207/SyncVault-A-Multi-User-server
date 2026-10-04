@@ -339,6 +339,20 @@ private static void handleUpdateUserRole(
 
                             return;
                         }
+
+            // ==========================================
+// CREATE REQUEST
+// ==========================================
+
+            if (firstMessage.startsWith("CREATE_REQUEST" + TAB)) {
+
+                handleCreateRequest(
+                        firstMessage,
+                        output
+                );
+
+                return;
+            }
             // ==========================================
             // GET USERS
             // ==========================================
@@ -458,6 +472,93 @@ private static void handleUpdateUserRole(
             );
         }
     }
+    private static void handleCreateRequest(
+            String message,
+            PrintWriter output) {
+
+        try {
+
+            String[] parts =
+                    message.split(TAB, -1);
+
+            if (parts.length != 5) {
+
+                output.println(
+                        "CREATE_REQUEST_ERROR\tInvalid request"
+                );
+
+                return;
+            }
+
+            int userId =
+                    Integer.parseInt(parts[1]);
+
+            Integer fileId = null;
+
+            if (!parts[2].isEmpty()) {
+
+                fileId =
+                        Integer.parseInt(parts[2]);
+            }
+
+            String requestType =
+                    decode(parts[3]);
+
+            int priority =
+                    Integer.parseInt(parts[4]);
+
+            if (priority < 1 || priority > 5) {
+
+                output.println(
+                        "CREATE_REQUEST_ERROR\tInvalid priority"
+                );
+
+                return;
+            }
+
+            RequestService requestService =
+                    new RequestService();
+
+            boolean created =
+                    requestService.createRequest(
+                            userId,
+                            fileId,
+                            requestType,
+                            priority
+                    );
+
+            if (created) {
+
+                output.println(
+                        "CREATE_REQUEST_OK"
+                );
+
+            } else {
+
+                output.println(
+                        "CREATE_REQUEST_ERROR\tCould not create request"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "CREATE_REQUEST_ERROR\tInvalid number"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while creating request: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "CREATE_REQUEST_ERROR\tDatabase error"
+            );
+        }
+    }
+
     // =====================================================
     // AUTHENTICATION
     // =====================================================
