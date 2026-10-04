@@ -23,7 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.InputStream;
 import java.io.OutputStream;
-
+import file.FileShareService;
 public class Server {
 
     private static final int PORT = 5050;
@@ -708,7 +708,10 @@ private static void handleUpdateUserRole(
 
                 return;
             }
-
+            if (firstMessage.startsWith("SHARE_FILE" + TAB)) {
+                handleShareFile(firstMessage, output);
+                return;
+            }
             if (firstMessage.startsWith("UPDATE_USER_STATUS" + TAB)) {
                 handleUpdateUserStatus(firstMessage, output);
                 return;
@@ -1429,6 +1432,71 @@ private static void handleUpdateUserRole(
                     );
                 }
             }
+        }
+    }
+    private static void handleShareFile(
+            String message,
+            PrintWriter output) {
+
+        try {
+
+            String[] parts =
+                    message.split(TAB, -1);
+
+            if (parts.length != 5) {
+                output.println(
+                        "SHARE_ERROR\tInvalid request"
+                );
+                return;
+            }
+
+            int fileId =
+                    Integer.parseInt(parts[1]);
+
+            int sharedBy =
+                    Integer.parseInt(parts[2]);
+
+            int sharedWith =
+                    Integer.parseInt(parts[3]);
+
+            String permission =
+                    parts[4];
+
+            FileShareService service =
+                    new FileShareService();
+
+            boolean success =
+                    service.shareFile(
+                            fileId,
+                            sharedBy,
+                            sharedWith,
+                            permission
+                    );
+
+            if (success) {
+                output.println("SHARE_OK");
+            } else {
+                output.println(
+                        "SHARE_ERROR\tShare rejected"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "SHARE_ERROR\tInvalid ID"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while sharing file: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "SHARE_ERROR\tDatabase error"
+            );
         }
     }
 }

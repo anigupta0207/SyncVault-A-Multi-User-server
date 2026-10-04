@@ -469,5 +469,69 @@ public class FileClientService {
             }
         }
     }
+    public boolean shareFile(
+            int fileId,
+            int sharedBy,
+            int sharedWith,
+            String permission) throws IOException {
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(10000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    new OutputStreamWriter(
+                                            socket.getOutputStream(),
+                                            StandardCharsets.UTF_8
+                                    ),
+                                    true
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                output.println(
+                        "SHARE_FILE" + "\t" +
+                                fileId + "\t" +
+                                sharedBy + "\t" +
+                                sharedWith + "\t" +
+                                permission
+                );
+
+                String response = input.readLine();
+
+                if ("SHARE_OK".equals(response)) {
+
+                    System.out.println(
+                            "File shared successfully."
+                    );
+
+                    return true;
+                }
+
+                System.out.println(
+                        "Share failed: " + response
+                );
+
+                return false;
+            }
+        }
+    }
 
 }
