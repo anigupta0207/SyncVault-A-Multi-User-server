@@ -1,7 +1,7 @@
 package request;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
+import db.DatabaseConnection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,14 +11,7 @@ import java.util.List;
 
 public class RequestService {
 
-    private static final String URL =
-            "jdbc:mysql://localhost:3306/syncvault";
 
-    private static final String DB_USER =
-            "root";
-
-    private static final String DB_PASSWORD =
-            "Animesh9889";
 
     // CREATE REQUEST
 
@@ -35,11 +28,7 @@ public class RequestService {
 
         try (
                 Connection conn =
-                        DriverManager.getConnection(
-                                URL,
-                                DB_USER,
-                                DB_PASSWORD
-                        );
+                        DatabaseConnection.getConnection();
 
                 PreparedStatement pstmt =
                         conn.prepareStatement(query)
@@ -103,11 +92,7 @@ public class RequestService {
 
         try (
                 Connection conn =
-                        DriverManager.getConnection(
-                                URL,
-                                DB_USER,
-                                DB_PASSWORD
-                        );
+                        DatabaseConnection.getConnection();
 
                 PreparedStatement pstmt =
                         conn.prepareStatement(query);
@@ -207,11 +192,7 @@ public class RequestService {
 
         try (
                 Connection conn =
-                        DriverManager.getConnection(
-                                URL,
-                                DB_USER,
-                                DB_PASSWORD
-                        );
+                        DatabaseConnection.getConnection();
 
                 PreparedStatement pstmt =
                         conn.prepareStatement(query)
@@ -271,11 +252,7 @@ public class RequestService {
 
         try (
                 Connection conn =
-                        DriverManager.getConnection(
-                                URL,
-                                DB_USER,
-                                DB_PASSWORD
-                        );
+                        DatabaseConnection.getConnection();
 
                 PreparedStatement pstmt =
                         conn.prepareStatement(query)

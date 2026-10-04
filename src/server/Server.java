@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Base64;
 import java.util.List;
+import request.Request;
+import request.RequestService;
 
 public class Server {
 
@@ -327,7 +329,16 @@ private static void handleUpdateUserRole(
 
                 return;
             }
+            // ==========================================
+            // GET REQUESTS
+            // ==========================================
 
+                        if (firstMessage.equals("GET_REQUESTS")) {
+
+                            handleGetRequests(output);
+
+                            return;
+                        }
             // ==========================================
             // GET USERS
             // ==========================================
@@ -481,6 +492,45 @@ private static void handleUpdateUserRole(
             );
 
             output.println("STATS_ERROR");
+        }
+    }
+    private static void handleGetRequests(
+            PrintWriter output) {
+
+        try {
+
+            RequestService requestService =
+                    new RequestService();
+
+            List<Request> requests =
+                    requestService.getPendingRequests();
+
+            for (Request request : requests) {
+
+                output.println(
+                        "REQUEST" + TAB +
+                                request.getRequestId() + TAB +
+                                request.getUserId() + TAB +
+                                (request.getFileId() == null
+                                        ? ""
+                                        : request.getFileId()) + TAB +
+                                encode(request.getRequestType()) + TAB +
+                                encode(request.getStatus()) + TAB +
+                                request.getPriority() + TAB +
+                                encode(request.getRequestTime())
+                );
+            }
+
+            output.println("REQUESTS_END");
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while retrieving requests: "
+                            + e.getMessage()
+            );
+
+            output.println("REQUESTS_ERROR");
         }
     }
     private static void handleAuthentication(
