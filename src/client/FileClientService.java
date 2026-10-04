@@ -203,4 +203,146 @@ public class FileClientService {
             }
         }
     }
+    public boolean downloadFile(
+            int fileId,
+            String destinationDirectory
+    ) throws IOException {
+
+        Path destination =
+                Paths.get(destinationDirectory);
+
+        Files.createDirectories(destination);
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(30000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    socket.getOutputStream(),
+                                    true,
+                                    StandardCharsets.UTF_8
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                output.println(
+                        "DOWNLOAD_FILE" + "\t" + fileId
+                );
+
+                String response =
+                        input.readLine();
+
+                if (response == null) {
+                    return false;
+                }
+
+                if (response.startsWith("DOWNLOAD_ERROR")) {
+
+                    System.out.println(
+                            "Download failed: " + response
+                    );
+
+                    return false;
+                }
+
+                String[] header =
+                        response.split("\t", -1);
+
+                if (header.length != 3 ||
+                        !header[0].equals("DOWNLOAD_OK")) {
+
+                    System.out.println(
+                            "Invalid download response."
+                    );
+
+                    return false;
+                }
+
+                String fileName =
+                        decode(header[1]);
+
+                long expectedSize =
+                        Long.parseLong(header[2]);
+
+                Path outputFile =
+                        destination.resolve(fileName);
+
+                long receivedSize = 0;
+
+                try (OutputStream fileOutput =
+                             Files.newOutputStream(
+                                     outputFile
+                             )) {
+
+                    while (true) {
+
+                        String line =
+                                input.readLine();
+
+                        if (line == null) {
+                            throw new IOException(
+                                    "Server disconnected during download."
+                            );
+                        }
+
+                        if (line.equals("DOWNLOAD_END")) {
+                            break;
+                        }
+
+                        if (!line.startsWith("DATA" + "\t")) {
+                            throw new IOException(
+                                    "Invalid download data."
+                            );
+                        }
+
+                        String encodedData =
+                                line.substring(5);
+
+                        byte[] chunk =
+                                Base64.getDecoder()
+                                        .decode(encodedData);
+
+                        fileOutput.write(chunk);
+
+                        receivedSize += chunk.length;
+                    }
+                }
+
+                if (receivedSize != expectedSize) {
+
+                    Files.deleteIfExists(outputFile);
+
+                    System.out.println(
+                            "Download failed: file size mismatch."
+                    );
+
+                    return false;
+                }
+
+                System.out.println(
+                        "File downloaded successfully: "
+                                + outputFile
+                );
+
+                return true;
+            }
+        }
+    }
 }

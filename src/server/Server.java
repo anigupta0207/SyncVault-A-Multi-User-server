@@ -19,6 +19,9 @@ import request.Request;
 import request.RequestService;
 import java.io.FileOutputStream;
 import java.nio.file.Path;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.InputStream;
 public class Server {
 
     private static final int PORT = 5050;
@@ -255,6 +258,113 @@ private static void handleUpdateUserRole(
 
             output.println(
                     "CREATE_USER_ERROR\tUnexpected server error"
+            );
+        }
+    }
+    private static void handleDownloadFile(
+            String message,
+            PrintWriter output) {
+
+        try {
+
+            String[] parts =
+                    message.split(TAB, -1);
+
+            if (parts.length != 2) {
+
+                output.println(
+                        "DOWNLOAD_ERROR\tInvalid request"
+                );
+
+                return;
+            }
+
+            int fileId =
+                    Integer.parseInt(parts[1]);
+
+            FileService fileService =
+                    new FileService();
+
+            /*
+             * We need a method that returns the
+             * physical file information.
+             */
+            FileInfo file =
+                    fileService.getFileById(fileId);
+
+            if (file == null) {
+
+                output.println(
+                        "DOWNLOAD_ERROR\tFile not found"
+                );
+
+                return;
+            }
+
+            Path filePath =
+                    Paths.get(file.getFilePath());
+
+            if (!Files.exists(filePath)) {
+
+                output.println(
+                        "DOWNLOAD_ERROR\tPhysical file not found"
+                );
+
+                return;
+            }
+
+            long fileSize =
+                    Files.size(filePath);
+
+            output.println(
+                    "DOWNLOAD_OK" + TAB +
+                            encode(file.getFileName()) + TAB +
+                            fileSize
+            );
+
+            try (InputStream fileInput =
+                         Files.newInputStream(filePath)) {
+
+                byte[] buffer =
+                        new byte[8192];
+
+                int bytesRead;
+
+                while ((bytesRead =
+                        fileInput.read(buffer)) != -1) {
+
+                    String encoded =
+                            Base64.getEncoder()
+                                    .encodeToString(
+                                            java.util.Arrays.copyOf(
+                                                    buffer,
+                                                    bytesRead
+                                            )
+                                    );
+
+                    output.println(
+                            "DATA" + TAB + encoded
+                    );
+                }
+            }
+
+            output.println("DOWNLOAD_END");
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "DOWNLOAD_ERROR\tInvalid file ID"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error during file download: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "DOWNLOAD_ERROR\tServer error"
             );
         }
     }
@@ -505,6 +615,19 @@ private static void handleUpdateUserRole(
                 handleUploadFile(
                         firstMessage,
                         input,
+                        output
+                );
+
+                return;
+            }
+            // ==========================================
+            // DOWNLOAD FILE
+            // ==========================================
+
+            if (firstMessage.startsWith("DOWNLOAD_FILE" + TAB)) {
+
+                handleDownloadFile(
+                        firstMessage,
                         output
                 );
 

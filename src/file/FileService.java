@@ -283,7 +283,58 @@ public class FileService {
         System.out.println("==============================================");
     }
     // DOWNLOAD FILE portion
+    public FileInfo getFileById(int fileId) {
 
+        String query =
+                "SELECT file_id, file_name, file_path, " +
+                        "file_type, file_size, status, " +
+                        "upload_date, owner_id " +
+                        "FROM Files " +
+                        "WHERE file_id = ?";
+
+        try (
+                Connection conn =
+                        DriverManager.getConnection(
+                                URL,
+                                DB_USER,
+                                DB_PASSWORD
+                        );
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setInt(1, fileId);
+
+            try (ResultSet rs =
+                         pstmt.executeQuery()) {
+
+                if (rs.next()) {
+
+                    return new FileInfo(
+                            rs.getInt("file_id"),
+                            rs.getString("file_name"),
+                            rs.getString("file_path"),
+                            rs.getString("file_type"),
+                            rs.getLong("file_size"),
+                            rs.getString("status"),
+                            rs.getString("upload_date"),
+                            rs.getInt("owner_id")
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Database error while finding file."
+            );
+
+            e.printStackTrace();
+        }
+
+        return null;
+    }
     public boolean downloadFile(
             int fileId,
             String destinationPath) {
