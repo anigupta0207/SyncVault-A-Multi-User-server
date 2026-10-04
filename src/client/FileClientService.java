@@ -400,5 +400,74 @@ public class FileClientService {
             }
         }
     }
+    public boolean modifyFile(int fileId, String newFilePath, int userId) throws IOException {
+
+        File file = new File(newFilePath);
+
+        if (!file.exists() || !file.isFile()) {
+            System.out.println("Replacement file not found.");
+            return false;
+        }
+
+        long fileSize = file.length();
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(SERVER_HOST, SERVER_PORT),
+                    5000
+            );
+
+            socket.setSoTimeout(15000);
+
+            try (
+                    BufferedReader input = new BufferedReader(
+                            new InputStreamReader(socket.getInputStream(),
+                                    StandardCharsets.UTF_8));
+
+                    PrintWriter output = new PrintWriter(
+                            new OutputStreamWriter(socket.getOutputStream(),
+                                    StandardCharsets.UTF_8),
+                            true);
+
+                    FileInputStream fileInput = new FileInputStream(file)
+            ) {
+
+                // Start modify request
+                output.println(
+                        "MODIFY_FILE" + "\t" +
+                                fileId + "\t" +
+                                userId + "\t" +
+                                fileSize
+                );
+
+                // Send file in chunks
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+
+                while ((bytesRead = fileInput.read(buffer)) != -1) {
+
+                    String encoded = Base64.getEncoder()
+                            .encodeToString(
+                                    java.util.Arrays.copyOf(buffer, bytesRead)
+                            );
+
+                    output.println("DATA" + "\t" + encoded);
+                }
+
+                output.println("MODIFY_END");
+
+                String response = input.readLine();
+
+                if ("MODIFY_OK".equals(response)) {
+                    System.out.println("File modified successfully.");
+                    return true;
+                }
+
+                System.out.println("Modify failed: " + response);
+                return false;
+            }
+        }
+    }
 
 }

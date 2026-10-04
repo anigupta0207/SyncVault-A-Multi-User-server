@@ -22,6 +22,8 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.InputStream;
+import java.io.OutputStream;
+
 public class Server {
 
     private static final int PORT = 5050;
@@ -644,6 +646,10 @@ private static void handleUpdateUserRole(
                         output
                 );
 
+                return;
+            }
+            if (firstMessage.startsWith("MODIFY_FILE" + TAB)) {
+                handleModifyFile(firstMessage, input, output);
                 return;
             }
             // ==========================================
@@ -1305,6 +1311,124 @@ private static void handleUpdateUserRole(
             output.println(
                     "UPDATE_USER_STATUS_ERROR\tUnexpected server error"
             );
+        }
+    }
+    //  modify File
+
+    private static void handleModifyFile(
+            String firstMessage,
+            BufferedReader input,
+            PrintWriter output) {
+
+        Path tempFile = null;
+
+        try {
+
+            String[] parts = firstMessage.split("\t");
+
+            if (parts.length != 4) {
+                output.println("MODIFY_ERROR\tInvalid request");
+                return;
+            }
+
+            int fileId = Integer.parseInt(parts[1]);
+            int userId = Integer.parseInt(parts[2]);
+            long expectedSize = Long.parseLong(parts[3]);
+
+            Path tempDir = Paths.get("storage", "temp");
+            Files.createDirectories(tempDir);
+
+            tempFile = Files.createTempFile(
+                    tempDir,
+                    "modify_",
+                    ".tmp"
+            );
+
+            long receivedSize = 0;
+
+            try (OutputStream fileOutput =
+                         Files.newOutputStream(tempFile)) {
+
+                String line;
+
+                while (true) {
+
+                    line = input.readLine();
+
+                    if (line == null) {
+                        break;
+                    }
+
+                    if ("MODIFY_END".equals(line)) {
+                        break;
+                    }
+
+                    if (!line.startsWith("DATA\t")) {
+                        output.println(
+                                "MODIFY_ERROR\tInvalid data"
+                        );
+                        return;
+                    }
+
+                    String encodedData = line.substring(5);
+
+                    byte[] chunk =
+                            Base64.getDecoder().decode(encodedData);
+
+                    fileOutput.write(chunk);
+                    receivedSize += chunk.length;
+                }
+            }
+
+            if (receivedSize != expectedSize) {
+
+                output.println(
+                        "MODIFY_ERROR\tSize mismatch"
+                );
+
+                return;
+            }
+
+            // FileService.modifyFile() is an instance method
+            FileService fileService = new FileService();
+
+            boolean success = fileService.modifyFile(
+                    fileId,
+                    tempFile.toString(),
+                    userId
+            );
+
+            if (success) {
+                output.println("MODIFY_OK");
+            } else {
+                output.println(
+                        "MODIFY_ERROR\tModification rejected"
+                );
+            }
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error modifying file: " + e.getMessage()
+            );
+
+            output.println(
+                    "MODIFY_ERROR\t" + e.getMessage()
+            );
+
+        } finally {
+
+            if (tempFile != null) {
+
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException e) {
+                    System.err.println(
+                            "Could not delete temporary file: "
+                                    + e.getMessage()
+                    );
+                }
+            }
         }
     }
 }

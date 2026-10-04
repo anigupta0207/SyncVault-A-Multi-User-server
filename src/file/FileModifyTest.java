@@ -1,45 +1,25 @@
 package file;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import client.FileClientService;
 
 public class FileModifyTest {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        FileService fileService = new FileService();
+        System.out.println("=================================");
+        System.out.println("      SYNCVAULT MODIFY TEST");
+        System.out.println("=================================");
 
-        // Use an ACTIVE file
-        int fileId = 1;
+        FileClientService service = new FileClientService();
 
-        // Create a new file that will replace the existing file
-        String newFilePath = "modified_content.txt";
-
-        try {
-            Files.writeString(
-                    Paths.get(newFilePath),
-                    "This is the MODIFIED content of the SyncVault file."
-            );
-
-            System.out.println("New modification file created.");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-
-        // Modify existing file
-        boolean modified = fileService.modifyFile(
-                fileId,
-                newFilePath,
-                2       // owner/user ID
+        boolean result = service.modifyFile(
+                2,
+                "C:\\Users\\Arshita\\Downloads\\modified_test.txt",
+                2
         );
 
-        if (modified) {
-            System.out.println("\nModify test successful.");
-        } else {
-            System.out.println("\nModify test failed.");
-        }
+        System.out.println(
+                "Modify result: " + result
+        );
     }
 }
