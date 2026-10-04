@@ -345,4 +345,60 @@ public class FileClientService {
             }
         }
     }
+    public boolean deleteFile(int fileId) throws IOException {
+
+        try (Socket socket = new Socket()) {
+
+            socket.connect(
+                    new InetSocketAddress(
+                            SERVER_HOST,
+                            SERVER_PORT
+                    ),
+                    5000
+            );
+
+            socket.setSoTimeout(10000);
+
+            try (
+                    PrintWriter output =
+                            new PrintWriter(
+                                    socket.getOutputStream(),
+                                    true,
+                                    StandardCharsets.UTF_8
+                            );
+
+                    BufferedReader input =
+                            new BufferedReader(
+                                    new InputStreamReader(
+                                            socket.getInputStream(),
+                                            StandardCharsets.UTF_8
+                                    )
+                            )
+            ) {
+
+                output.println(
+                        "DELETE_FILE" + "\t" + fileId
+                );
+
+                String response =
+                        input.readLine();
+
+                if ("DELETE_OK".equals(response)) {
+
+                    System.out.println(
+                            "File deleted successfully."
+                    );
+
+                    return true;
+                }
+
+                System.out.println(
+                        "Delete failed: " + response
+                );
+
+                return false;
+            }
+        }
+    }
+
 }

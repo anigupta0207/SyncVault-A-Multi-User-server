@@ -634,6 +634,19 @@ private static void handleUpdateUserRole(
                 return;
             }
             // ==========================================
+            // DELETE FILE
+            // ==========================================
+
+            if (firstMessage.startsWith("DELETE_FILE" + TAB)) {
+
+                handleDeleteFile(
+                        firstMessage,
+                        output
+                );
+
+                return;
+            }
+            // ==========================================
             // GET FILES
             // ==========================================
 
@@ -667,8 +680,8 @@ private static void handleUpdateUserRole(
                         }
 
             // ==========================================
-// CREATE REQUEST
-// ==========================================
+            // CREATE REQUEST
+            // ==========================================
 
             if (firstMessage.startsWith("CREATE_REQUEST" + TAB)) {
 
@@ -795,6 +808,67 @@ private static void handleUpdateUserRole(
             System.out.println(
                     "Client disconnected: "
                             + e.getMessage()
+            );
+        }
+    }
+    private static void handleDeleteFile(
+            String message,
+            PrintWriter output) {
+
+        try {
+
+            String[] parts =
+                    message.split(TAB, -1);
+
+            if (parts.length != 2) {
+
+                output.println(
+                        "DELETE_ERROR\tInvalid request"
+                );
+
+                return;
+            }
+
+            int fileId =
+                    Integer.parseInt(parts[1]);
+
+            FileService fileService =
+                    new FileService();
+
+            boolean deleted =
+                    fileService.deleteFile(fileId);
+
+            if (deleted) {
+
+                output.println("DELETE_OK");
+
+                System.out.println(
+                        "File deleted successfully. File ID: "
+                                + fileId
+                );
+
+            } else {
+
+                output.println(
+                        "DELETE_ERROR\tFile could not be deleted"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "DELETE_ERROR\tInvalid file ID"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while deleting file: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "DELETE_ERROR\tServer error"
             );
         }
     }
