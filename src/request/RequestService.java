@@ -88,7 +88,7 @@ public class RequestService {
                         "request_type, status, priority, request_time " +
                         "FROM Requests " +
                         "WHERE status = 'pending' " +
-                        "ORDER BY request_time ASC";
+                        "ORDER BY request_time ASC, request_id ASC";
 
         try (
                 Connection conn =

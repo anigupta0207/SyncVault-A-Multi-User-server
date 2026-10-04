@@ -18,7 +18,7 @@ public class PriorityRequestQueue {
     }
 
     // Add one request
-    public void addRequest(Request request) {
+    public synchronized void addRequest(Request request) {
 
         queue.offer(request);
 
@@ -40,7 +40,7 @@ public class PriorityRequestQueue {
     }
 
     // Process highest-priority request
-    public Request processNextRequest() {
+    public synchronized Request processNextRequest() {
 
         return queue.poll();
     }
@@ -52,7 +52,7 @@ public class PriorityRequestQueue {
     }
 
     // Check if queue is empty
-    public boolean isEmpty() {
+    public synchronized boolean isEmpty() {
 
         return queue.isEmpty();
     }

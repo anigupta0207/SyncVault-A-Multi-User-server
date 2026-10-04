@@ -22,6 +22,7 @@ public class RequestTest {
             return;
         }
 
+
         // ==================================================
         // FCFS QUEUE TEST
         // ==================================================
@@ -94,7 +95,7 @@ public class RequestTest {
 
 
         // ==================================================
-        // CREATE WORKER THREADS
+        // CREATE SHARED WORKER THREADS
         // ==================================================
 
         List<Thread> workers =
@@ -104,18 +105,17 @@ public class RequestTest {
                 "\n======= STARTING WORKERS ======="
         );
 
+        int numberOfWorkers = 3;
 
-        while (!priorityQueue.isEmpty()) {
-
-            Request request =
-                    priorityQueue.processNextRequest();
+        for (int i = 1; i <= numberOfWorkers; i++) {
 
             Thread worker =
                     new Thread(
                             new RequestWorker(
-                                    request,
+                                    priorityQueue,
                                     processor
-                            )
+                            ),
+                            "Worker-" + i
                     );
 
             workers.add(worker);

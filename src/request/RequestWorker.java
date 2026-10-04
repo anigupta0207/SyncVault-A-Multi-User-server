@@ -2,33 +2,53 @@ package request;
 
 public class RequestWorker implements Runnable {
 
-    private final Request request;
+    private final PriorityRequestQueue queue;
     private final RequestProcessor processor;
 
-    public RequestWorker(Request request,
-                         RequestProcessor processor) {
+    public RequestWorker(
+            PriorityRequestQueue queue,
+            RequestProcessor processor) {
 
-        this.request = request;
+        this.queue = queue;
         this.processor = processor;
     }
 
     @Override
     public void run() {
 
+        String threadName =
+                Thread.currentThread().getName();
+
         System.out.println(
                 "Worker started | Thread: "
-                        + Thread.currentThread().getName()
-                        + " | Request: "
-                        + request.getRequestId()
+                        + threadName
         );
 
-        processor.processRequest(request);
+        while (true) {
+
+            // Safely take one request from shared queue
+            Request request =
+                    queue.processNextRequest();
+
+            // No requests left
+            if (request == null) {
+
+                break;
+            }
+
+            System.out.println(
+                    "Thread "
+                            + threadName
+                            + " picked Request "
+                            + request.getRequestId()
+            );
+
+            processor.processRequest(request);
+        }
 
         System.out.println(
                 "Worker finished | Thread: "
-                        + Thread.currentThread().getName()
-                        + " | Request: "
-                        + request.getRequestId()
+                        + threadName
         );
     }
 }
