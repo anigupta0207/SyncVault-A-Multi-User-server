@@ -707,6 +707,15 @@ private static void handleUpdateUserRole(
                 handleSubmitFile(firstMessage, output);
                 return;
             }
+            if (firstMessage.startsWith("APPROVE_SUBMISSION" + TAB)) {
+                handleApproveSubmission(firstMessage, output);
+                return;
+            }
+
+            if (firstMessage.startsWith("REJECT_SUBMISSION" + TAB)) {
+                handleRejectSubmission(firstMessage, output);
+                return;
+            }
             if (firstMessage.equals("GET_USERS")) {
 
                 handleGetUsers(output);
@@ -1614,4 +1623,99 @@ private static void handleUpdateUserRole(
             );
         }
     }
+    private static void handleApproveSubmission(
+            String message,
+            PrintWriter output) {
+
+        try {
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 2) {
+                output.println("APPROVE_ERROR\tInvalid request");
+                return;
+            }
+
+            int requestId = Integer.parseInt(parts[1]);
+
+            SubmissionService service =
+                    new SubmissionService();
+
+            boolean success =
+                    service.approveSubmission(requestId);
+
+            if (success) {
+                output.println("APPROVE_OK");
+            } else {
+                output.println(
+                        "APPROVE_ERROR\tApproval failed"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "APPROVE_ERROR\tInvalid request ID"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while approving submission: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "APPROVE_ERROR\tServer error"
+            );
+        }
+    }
+
+
+    private static void handleRejectSubmission(
+            String message,
+            PrintWriter output) {
+
+        try {
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 2) {
+                output.println("REJECT_ERROR\tInvalid request");
+                return;
+            }
+
+            int requestId = Integer.parseInt(parts[1]);
+
+            SubmissionService service =
+                    new SubmissionService();
+
+            boolean success =
+                    service.rejectSubmission(requestId);
+
+            if (success) {
+                output.println("REJECT_OK");
+            } else {
+                output.println(
+                        "REJECT_ERROR\tRejection failed"
+                );
+            }
+
+        } catch (NumberFormatException e) {
+
+            output.println(
+                    "REJECT_ERROR\tInvalid request ID"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Error while rejecting submission: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "REJECT_ERROR\tServer error"
+            );
+        }
+    }
+
 }

@@ -28,9 +28,10 @@ public class RequestProcessor {
         );
 
 
-        // ==========================================
+        // ========================================================
         // CLAIM REQUEST
-        // ==========================================
+        // pending -> processing
+        // ========================================================
 
         boolean claimed =
                 requestService.claimRequest(
@@ -56,9 +57,38 @@ public class RequestProcessor {
         );
 
 
-        // ==========================================
-        // SIMULATE PROCESSING
-        // ==========================================
+        // ========================================================
+        // SUBMISSION REQUEST
+        // ========================================================
+
+        if ("SUBMISSION".equalsIgnoreCase(
+                request.getRequestType())) {
+
+            System.out.println(
+                    "Submission request detected."
+            );
+
+            System.out.println(
+                    "Request "
+                            + request.getRequestId()
+                            + " is waiting for teacher approval."
+            );
+
+            System.out.println(
+                    "Request remains in PROCESSING state."
+            );
+
+            System.out.println(
+                    "------------------------------------------"
+            );
+
+            return;
+        }
+
+
+        // ========================================================
+        // NORMAL REQUEST PROCESSING
+        // ========================================================
 
         try {
 
@@ -75,7 +105,11 @@ public class RequestProcessor {
             return;
         }
 
+
+        // ========================================================
         // COMPLETE REQUEST
+        // ========================================================
+
         boolean completed =
                 requestService.updateRequestStatus(
                         request.getRequestId(),

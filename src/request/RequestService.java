@@ -1,21 +1,45 @@
 package request;
 
-import java.sql.Connection;
 import db.DatabaseConnection;
+
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RequestService {
 
-
-
+    // ============================================================
     // CREATE REQUEST
+    // Existing method - kept for compatibility
+    // ============================================================
 
     public boolean createRequest(
+            int userId,
+            Integer fileId,
+            String requestType,
+            int priority) {
+
+        int requestId = createRequestWithId(
+                userId,
+                fileId,
+                requestType,
+                priority
+        );
+
+        return requestId != -1;
+    }
+
+
+    // ============================================================
+    // CREATE REQUEST AND RETURN GENERATED REQUEST ID
+    // ============================================================
+
+    public int createRequestWithId(
             int userId,
             Integer fileId,
             String requestType,
@@ -31,7 +55,10 @@ public class RequestService {
                         DatabaseConnection.getConnection();
 
                 PreparedStatement pstmt =
-                        conn.prepareStatement(query)
+                        conn.prepareStatement(
+                                query,
+                                Statement.RETURN_GENERATED_KEYS
+                        )
         ) {
 
             pstmt.setInt(1, userId);
@@ -54,13 +81,32 @@ public class RequestService {
             int rowsInserted =
                     pstmt.executeUpdate();
 
-            if (rowsInserted == 1) {
+            if (rowsInserted != 1) {
 
                 System.out.println(
-                        "Request created successfully."
+                        "Request could not be created."
                 );
 
-                return true;
+                return -1;
+            }
+
+            // Get AUTO_INCREMENT request_id
+            try (ResultSet generatedKeys =
+                         pstmt.getGeneratedKeys()) {
+
+                if (generatedKeys.next()) {
+
+                    int requestId =
+                            generatedKeys.getInt(1);
+
+                    System.out.println(
+                            "Request created successfully. " +
+                                    "Request ID: " +
+                                    requestId
+                    );
+
+                    return requestId;
+                }
             }
 
         } catch (SQLException e) {
@@ -72,11 +118,13 @@ public class RequestService {
             e.printStackTrace();
         }
 
-        return false;
+        return -1;
     }
 
 
+    // ============================================================
     // GET PENDING REQUESTS
+    // ============================================================
 
     public List<Request> getPendingRequests() {
 
@@ -109,6 +157,7 @@ public class RequestService {
                         rs.getInt("file_id");
 
                 if (!rs.wasNull()) {
+
                     fileId = databaseFileId;
                 }
 
@@ -138,7 +187,11 @@ public class RequestService {
         return requests;
     }
 
+
+    // ============================================================
     // VIEW PENDING REQUESTS
+    // ============================================================
+
     public void viewPendingRequests() {
 
         List<Request> requests =
@@ -180,7 +233,10 @@ public class RequestService {
     }
 
 
-  // here claim mean where the request are pending remove it pending
+    // ============================================================
+    // CLAIM REQUEST
+    // pending -> processing
+    // ============================================================
 
     public boolean claimRequest(int requestId) {
 
@@ -235,7 +291,9 @@ public class RequestService {
     }
 
 
-    // here we simply setting the request to completed
+    // ============================================================
+    // UPDATE REQUEST STATUS
+    // ============================================================
 
     public boolean updateRequestStatus(
             int requestId,
@@ -265,17 +323,130 @@ public class RequestService {
             int rowsUpdated =
                     pstmt.executeUpdate();
 
+            return rowsUpdated == 1;
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Database error while updating request."
+            );
+
+            e.printStackTrace();
+
+            return false;
+        }
+    }
+    // ============================================================
+// APPROVE SUBMISSION
+// processing -> completed
+// ============================================================
+
+    public boolean approveSubmission(int requestId) {
+
+        String query =
+                "UPDATE Requests " +
+                        "SET status = 'completed', " +
+                        "processed_time = CURRENT_TIMESTAMP " +
+                        "WHERE request_id = ? " +
+                        "AND request_type = 'SUBMISSION' " +
+                        "AND status = 'processing'";
+
+        try (
+                Connection conn =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setInt(1, requestId);
+
+            int rowsUpdated =
+                    pstmt.executeUpdate();
+
             if (rowsUpdated == 1) {
+
+                System.out.println(
+                        "Submission "
+                                + requestId
+                                + " approved successfully."
+                );
 
                 return true;
             }
+
+            System.out.println(
+                    "Submission "
+                            + requestId
+                            + " could not be approved."
+            );
 
             return false;
 
         } catch (SQLException e) {
 
             System.out.println(
-                    "Database error while updating request."
+                    "Database error while approving submission."
+            );
+
+            e.printStackTrace();
+
+            return false;
+        }
+    }
+
+
+// ============================================================
+// REJECT SUBMISSION
+// processing -> rejected
+// ============================================================
+
+    public boolean rejectSubmission(int requestId) {
+
+        String query =
+                "UPDATE Requests " +
+                        "SET status = 'rejected', " +
+                        "processed_time = CURRENT_TIMESTAMP " +
+                        "WHERE request_id = ? " +
+                        "AND request_type = 'SUBMISSION' " +
+                        "AND status = 'processing'";
+
+        try (
+                Connection conn =
+                        DatabaseConnection.getConnection();
+
+                PreparedStatement pstmt =
+                        conn.prepareStatement(query)
+        ) {
+
+            pstmt.setInt(1, requestId);
+
+            int rowsUpdated =
+                    pstmt.executeUpdate();
+
+            if (rowsUpdated == 1) {
+
+                System.out.println(
+                        "Submission "
+                                + requestId
+                                + " rejected successfully."
+                );
+
+                return true;
+            }
+
+            System.out.println(
+                    "Submission "
+                            + requestId
+                            + " could not be rejected."
+            );
+
+            return false;
+
+        } catch (SQLException e) {
+
+            System.out.println(
+                    "Database error while rejecting submission."
             );
 
             e.printStackTrace();

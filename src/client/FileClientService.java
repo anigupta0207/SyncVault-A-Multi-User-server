@@ -689,5 +689,128 @@ public class FileClientService {
 
         return false;
     }
+// ============================================================
+// APPROVE SUBMISSION
+// ============================================================
 
+    public boolean approveSubmission(int requestId) {
+
+        try (
+                Socket socket =
+                        new Socket(SERVER_HOST, SERVER_PORT);
+
+                BufferedReader input =
+                        new BufferedReader(
+                                new InputStreamReader(
+                                        socket.getInputStream()
+                                )
+                        );
+
+                PrintWriter output =
+                        new PrintWriter(
+                                socket.getOutputStream(),
+                                true
+                        )
+        ) {
+
+            output.println(
+                    "APPROVE_SUBMISSION"
+                            + "\t"
+                            + requestId
+            );
+
+            String response = input.readLine();
+
+            if ("APPROVE_OK".equals(response)) {
+
+                System.out.println(
+                        "Submission approved successfully."
+                );
+
+                return true;
+            }
+
+            if (response != null &&
+                    response.startsWith("APPROVE_ERROR")) {
+
+                System.out.println(
+                        "Approval failed: "
+                                + response
+                );
+            }
+
+        } catch (IOException e) {
+
+            System.out.println(
+                    "Connection error while approving submission."
+            );
+
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+
+// ============================================================
+// REJECT SUBMISSION
+// ============================================================
+
+    public boolean rejectSubmission(int requestId) {
+
+        try (
+                Socket socket =
+                        new Socket(SERVER_HOST, SERVER_PORT);
+
+                BufferedReader input =
+                        new BufferedReader(
+                                new InputStreamReader(
+                                        socket.getInputStream()
+                                )
+                        );
+
+                PrintWriter output =
+                        new PrintWriter(
+                                socket.getOutputStream(),
+                                true
+                        )
+        ) {
+
+            output.println(
+                    "REJECT_SUBMISSION"
+                            + "\t"
+                            + requestId
+            );
+
+            String response = input.readLine();
+
+            if ("REJECT_OK".equals(response)) {
+
+                System.out.println(
+                        "Submission rejected successfully."
+                );
+
+                return true;
+            }
+
+            if (response != null &&
+                    response.startsWith("REJECT_ERROR")) {
+
+                System.out.println(
+                        "Rejection failed: "
+                                + response
+                );
+            }
+
+        } catch (IOException e) {
+
+            System.out.println(
+                    "Connection error while rejecting submission."
+            );
+
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }
