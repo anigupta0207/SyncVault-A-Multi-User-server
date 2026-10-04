@@ -9,13 +9,20 @@ public class FileShare {
     private String permission;
     private String sharedAt;
 
+    private String fileName;
+    private long fileSize;
+    private String fileType;
+
     public FileShare(
             int shareId,
             int fileId,
             int sharedBy,
             int sharedWith,
             String permission,
-            String sharedAt) {
+            String sharedAt,
+            String fileName,
+            long fileSize,
+            String fileType) {
 
         this.shareId = shareId;
         this.fileId = fileId;
@@ -23,6 +30,9 @@ public class FileShare {
         this.sharedWith = sharedWith;
         this.permission = permission;
         this.sharedAt = sharedAt;
+        this.fileName = fileName;
+        this.fileSize = fileSize;
+        this.fileType = fileType;
     }
 
     public int getShareId() {
@@ -47,5 +57,17 @@ public class FileShare {
 
     public String getSharedAt() {
         return sharedAt;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public long getFileSize() {
+        return fileSize;
+    }
+
+    public String getFileType() {
+        return fileType;
     }
 }

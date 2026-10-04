@@ -1538,10 +1538,12 @@ private static void handleUpdateUserRole(
                                 share.getSharedBy() + TAB +
                                 share.getSharedWith() + TAB +
                                 encode(share.getPermission()) + TAB +
-                                encode(share.getSharedAt())
+                                encode(share.getSharedAt()) + TAB +
+                                encode(share.getFileName()) + TAB +
+                                share.getFileSize() + TAB +
+                                encode(share.getFileType())
                 );
             }
-
             output.println("SHARED_FILES_END");
 
         } catch (NumberFormatException e) {

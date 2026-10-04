@@ -589,7 +589,7 @@ public class FileClientService {
                         String[] parts =
                                 line.split("\t", -1);
 
-                        if (parts.length != 7) {
+                        if (parts.length != 10) {
                             continue;
                         }
 
@@ -600,8 +600,13 @@ public class FileClientService {
                                         Integer.parseInt(parts[3]),
                                         Integer.parseInt(parts[4]),
                                         decode(parts[5]),
-                                        decode(parts[6])
+                                        decode(parts[6]),
+                                        decode(parts[7]),
+                                        Long.parseLong(parts[8]),
+                                        decode(parts[9])
                                 );
+
+                        shares.add(share);
 
                         shares.add(share);
                     }

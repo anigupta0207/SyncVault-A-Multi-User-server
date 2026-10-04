@@ -156,12 +156,15 @@ public class FileShareService {
         List<FileShare> shares =
                 new ArrayList<>();
 
-        String query =
-                "SELECT share_id, file_id, shared_by, " +
-                        "shared_with, permission, shared_at " +
-                        "FROM File_Shares " +
-                        "WHERE shared_with = ? " +
-                        "ORDER BY shared_at DESC";
+                String query =
+                "SELECT fs.share_id, fs.file_id, fs.shared_by, " +
+                        "fs.shared_with, fs.permission, fs.shared_at, " +
+                        "f.file_name, f.file_size, f.file_type " +
+                        "FROM File_Shares fs " +
+                        "JOIN Files f ON fs.file_id = f.file_id " +
+                        "WHERE fs.shared_with = ? " +
+                        "AND f.status = 'active' " +
+                        "ORDER BY fs.shared_at DESC";
 
         try (Connection conn =
                      DriverManager.getConnection(
@@ -180,14 +183,17 @@ public class FileShareService {
                 while (rs.next()) {
 
                     shares.add(
-                            new FileShare(
-                                    rs.getInt("share_id"),
-                                    rs.getInt("file_id"),
-                                    rs.getInt("shared_by"),
-                                    rs.getInt("shared_with"),
-                                    rs.getString("permission"),
-                                    rs.getString("shared_at")
-                            )
+                                    new FileShare(
+                                            rs.getInt("share_id"),
+                                            rs.getInt("file_id"),
+                                            rs.getInt("shared_by"),
+                                            rs.getInt("shared_with"),
+                                            rs.getString("permission"),
+                                            rs.getString("shared_at"),
+                                            rs.getString("file_name"),
+                                            rs.getLong("file_size"),
+                                            rs.getString("file_type")
+                                    )
                     );
                 }
             }

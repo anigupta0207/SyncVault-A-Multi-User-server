@@ -62,6 +62,17 @@ public class FileSharedFilesTest {
                         "Shared At: "
                                 + share.getSharedAt()
                 );
+                System.out.println(
+                        "File Name: " + share.getFileName()
+                );
+
+                System.out.println(
+                        "File Size: " + share.getFileSize()
+                );
+
+                System.out.println(
+                        "File Type: " + share.getFileType()
+                );
             }
         }
     }
