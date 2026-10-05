@@ -7,11 +7,13 @@ import file.FileInfo;
 import Admin.AdminUserDataService.UserInfo;
 import client.RequestClientService;
 import request.Request;
-
+import Teacher.TeacherSubmissionPanel;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-
+import Admin.AdminDashboard;
+import Teacher.TeacherDashboard;
+import Student.StudentDashboard;
 import java.awt.*;
 import java.util.List;
 import client.Session;
@@ -703,13 +705,111 @@ public class SyncVaultSwing {
 
         field.setBackground(Color.WHITE);
     }
+    // =========================================================
+// DASHBOARD PAGE RENDERER
+// =========================================================
 
+    private static JPanel renderPage(
+            String page
+    ) {
+
+        currentPage =
+                page;
+
+        return pageContent();
+    }
+    // =========================================================
+// SIGN OUT
+// =========================================================
+
+    private static void signOut() {
+
+        role =
+                "User";
+
+        email =
+                "";
+
+        currentUserName =
+                "";
+
+        currentPage =
+                "Overview";
+
+        Session.clear();
+
+        showLogin();
+    }
 
     // =========================================================
     // DASHBOARD
     // =========================================================
+// =========================================================
+// ROLE DASHBOARD ROUTER
+// =========================================================
 
     private static void showDashboard() {
+
+        AuthenticatedUser user =
+                Session.getUser();
+
+        if (user == null) {
+
+            showLogin();
+
+            return;
+        }
+
+        JPanel dashboard;
+
+        if (role.equalsIgnoreCase("Admin")) {
+
+            dashboard =
+                    new AdminDashboard(
+                            user,
+                            SyncVaultSwing::renderPage,
+                            SyncVaultSwing::signOut
+                    );
+
+        } else if (role.equalsIgnoreCase("Teacher")) {
+
+            dashboard =
+                    new TeacherDashboard(
+                            user,
+                            SyncVaultSwing::renderPage,
+                            SyncVaultSwing::signOut
+                    );
+
+        } else if (role.equalsIgnoreCase("Student")) {
+
+            dashboard =
+                    new StudentDashboard(
+                            user,
+                            SyncVaultSwing::renderPage,
+                            SyncVaultSwing::signOut
+                    );
+
+        } else {
+
+            JOptionPane.showMessageDialog(
+                    frame,
+                    "Unknown user role: " + role,
+                    "Role Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return;
+        }
+
+        frame.setContentPane(
+                dashboard
+        );
+
+        frame.revalidate();
+
+        frame.repaint();
+    }
+    private static void showLegacyDashboard()  {
 
         JPanel app =
                 new JPanel(
@@ -2250,14 +2350,23 @@ public class SyncVaultSwing {
 
     private static JPanel pageContent() {
 
-        if (
-                currentPage.equals("Files")
-                        ||
-                        currentPage.equals("Submissions")
-                        ||
-                        currentPage.equals("File versions")
-        ) {
+        if (currentPage.equals("Submissions")) {
 
+            if (role.equalsIgnoreCase("Teacher")) {
+
+                return new TeacherSubmissionPanel().getPanel();
+
+            } else {
+
+                return new SubmissionPanel().getPanel();
+            }
+        }
+
+        if (currentPage.equals("Files")) {
+            return fileCard();
+        }
+
+        if (currentPage.equals("File versions")) {
             return fileCard();
         }
 
@@ -2273,14 +2382,6 @@ public class SyncVaultSwing {
         // =====================================================
         // TEAM & ROLES
         // =====================================================
-
-        // =====================================================
-// TEAM & ROLES
-// =====================================================
-
-        // =====================================================
-// TEAM & ROLES
-// =====================================================
 
         if (currentPage.equals("Team & roles")) {
 

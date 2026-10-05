@@ -345,12 +345,10 @@ public class RequestService {
 
         String query =
                 "UPDATE Requests " +
-                        "SET status = 'completed', " +
-                        "processed_time = CURRENT_TIMESTAMP " +
-                        "WHERE request_id = ? " +
-                        "AND request_type = 'SUBMISSION' " +
-                        "AND status = 'processing'";
-
+                        "SET status='completed', processed_time=CURRENT_TIMESTAMP " +
+                        "WHERE request_id=? " +
+                        "AND request_type='SUBMISSION' " +
+                        "AND status IN ('pending', 'processing')";
         try (
                 Connection conn =
                         DatabaseConnection.getConnection();
@@ -405,11 +403,10 @@ public class RequestService {
 
         String query =
                 "UPDATE Requests " +
-                        "SET status = 'rejected', " +
-                        "processed_time = CURRENT_TIMESTAMP " +
-                        "WHERE request_id = ? " +
-                        "AND request_type = 'SUBMISSION' " +
-                        "AND status = 'processing'";
+                        "SET status='rejected', processed_time=CURRENT_TIMESTAMP " +
+                        "WHERE request_id=? " +
+                        "AND request_type='SUBMISSION' " +
+                        "AND status IN ('pending', 'processing')";
 
         try (
                 Connection conn =
