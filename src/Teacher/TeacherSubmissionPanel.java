@@ -2,7 +2,9 @@ package Teacher;
 import client.FileClientService;
 import client.RequestClientService;
 import request.Request;
+import file.FileInfo;
 
+import java.io.File;
 import javax.swing.*;
         import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
@@ -284,6 +286,11 @@ public class TeacherSubmissionPanel {
 
         actions.setOpaque(false);
 
+        JButton downloadButton =
+                new JButton(
+                        "↓ Download"
+                );
+
         JButton approveButton =
                 new JButton(
                         "✓ Approve"
@@ -294,9 +301,18 @@ public class TeacherSubmissionPanel {
                         "✕ Reject"
                 );
 
+        downloadButton.setFocusPainted(false);
+
         approveButton.setFocusPainted(false);
 
         rejectButton.setFocusPainted(false);
+
+        downloadButton.setPreferredSize(
+                new Dimension(
+                        120,
+                        38
+                )
+        );
 
         approveButton.setPreferredSize(
                 new Dimension(
@@ -312,6 +328,10 @@ public class TeacherSubmissionPanel {
                 )
         );
 
+        downloadButton.addActionListener(
+                e -> downloadSelected()
+        );
+
         approveButton.addActionListener(
                 e -> approveSelected()
         );
@@ -321,13 +341,16 @@ public class TeacherSubmissionPanel {
         );
 
         actions.add(
+                downloadButton
+        );
+
+        actions.add(
                 approveButton
         );
 
         actions.add(
                 rejectButton
         );
-
         card.add(
                 actions,
                 BorderLayout.SOUTH
@@ -465,6 +488,180 @@ public class TeacherSubmissionPanel {
         }
 
         return "File #" + fileId;
+    }
+
+    // =========================================================
+    // DOWNLOAD SELECTED SUBMISSION
+    // =========================================================
+
+    private void downloadSelected() {
+
+        int row =
+                table.getSelectedRow();
+
+        if (row == -1) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Please select a submission first.",
+                    "No Submission Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            return;
+        }
+
+        if (row >= submissionRequests.size()) {
+            return;
+        }
+
+        Request request =
+                submissionRequests.get(row);
+
+        Integer fileId =
+                request.getFileId();
+
+        if (fileId == null) {
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "This submission does not have an attached file.",
+                    "Download Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+
+            return;
+        }
+
+        try {
+
+            // =================================================
+            // FIND FILE INFORMATION
+            // =================================================
+
+            FileClientService fileService =
+                    new FileClientService();
+
+            List<FileInfo> files =
+                    fileService.getAllFiles();
+
+            FileInfo selectedFile = null;
+
+            for (FileInfo file : files) {
+
+                if (
+                        file.getFileId()
+                                == fileId
+                ) {
+
+                    selectedFile = file;
+
+                    break;
+                }
+            }
+
+            if (selectedFile == null) {
+
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "The submitted file could not be found.",
+                        "Download Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+                return;
+            }
+
+            if (
+                    !"active".equalsIgnoreCase(
+                            selectedFile.getStatus()
+                    )
+            ) {
+
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "This file is no longer active.",
+                        "Download Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+                return;
+            }
+
+            // =================================================
+            // CHOOSE DESTINATION FOLDER
+            // =================================================
+
+            JFileChooser chooser =
+                    new JFileChooser();
+
+            chooser.setDialogTitle(
+                    "Choose Download Location"
+            );
+
+            chooser.setFileSelectionMode(
+                    JFileChooser.DIRECTORIES_ONLY
+            );
+
+            int result =
+                    chooser.showSaveDialog(panel);
+
+            if (
+                    result
+                            != JFileChooser.APPROVE_OPTION
+            ) {
+                return;
+            }
+
+            File destination =
+                    chooser.getSelectedFile();
+
+            // =================================================
+            // DOWNLOAD
+            // =================================================
+
+            boolean success =
+                    fileService.downloadFile(
+                            fileId,
+                            destination.getAbsolutePath()
+                    );
+
+            if (success) {
+
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "File downloaded successfully.\n\n"
+                                + "File: "
+                                + selectedFile.getFileName()
+                                + "\n"
+                                + "Location: "
+                                + destination.getAbsolutePath(),
+                        "Download Successful",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+            } else {
+
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "The file could not be downloaded.",
+                        "Download Failed",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Error while downloading the submission:\n\n"
+                            + e.getMessage(),
+                    "Download Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     // =========================================================
