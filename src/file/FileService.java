@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.Timestamp;
 
 public class FileService {
 
@@ -451,145 +452,44 @@ public class FileService {
     }
     public boolean deleteFile(int fileId) {
 
-        String selectQuery =
-                "SELECT file_path, status " +
-                        "FROM Files " +
-                        "WHERE file_id = ?";
-
         String updateQuery =
                 "UPDATE Files " +
                         "SET status = 'deleted' " +
                         "WHERE file_id = ? " +
                         "AND status = 'active'";
 
-
         try (
-                Connection conn =
-                        DriverManager.getConnection(
-                                URL,
-                                DB_USER,
-                                DB_PASSWORD
-                        );
-
-                PreparedStatement selectStmt =
-                        conn.prepareStatement(selectQuery)
+                Connection conn = DriverManager.getConnection(
+                        URL,
+                        DB_USER,
+                        DB_PASSWORD
+                );
+                PreparedStatement updateStmt =
+                        conn.prepareStatement(updateQuery)
         ) {
 
-            // STEP 1: FIND FILE
+            updateStmt.setInt(1, fileId);
 
-            selectStmt.setInt(1, fileId);
+            int rowsUpdated = updateStmt.executeUpdate();
 
-            String filePath;
-            String status;
-
-            try (
-                    ResultSet rs =
-                            selectStmt.executeQuery()
-            ) {
-
-                if (!rs.next()) {
-
-                    System.out.println(
-                            "File not found."
-                    );
-
-                    return false;
-                }
-
-                filePath =
-                        rs.getString("file_path");
-
-                status =
-                        rs.getString("status");
-            }
-
-
-            // STEP 2: CHECK STATUS
-
-            if (!"active".equalsIgnoreCase(status)) {
-
+            if (rowsUpdated == 1) {
                 System.out.println(
-                        "File is already deleted or inactive."
+                        "File deactivated successfully. File ID: " + fileId
                 );
-
-                return false;
+                return true;
             }
-
-
-            // STEP 3: DELETE PHYSICAL FILE
-
-            Path physicalFile =
-                    Paths.get(filePath);
-
-            if (Files.exists(physicalFile)) {
-
-                Files.delete(physicalFile);
-
-                System.out.println(
-                        "Physical file deleted."
-                );
-
-            } else {
-
-                System.out.println(
-                        "Physical file was not found."
-                );
-            }
-
-
-            // STEP 4: UPDATE DATABASE STATUS
-
-            try (
-                    PreparedStatement updateStmt =
-                            conn.prepareStatement(
-                                    updateQuery
-                            )
-            ) {
-
-                updateStmt.setInt(1, fileId);
-
-                int rowsUpdated =
-                        updateStmt.executeUpdate();
-
-                if (rowsUpdated == 1) {
-
-                    System.out.println(
-                            "File status changed to DELETED."
-                    );
-
-                    return true;
-                }
-
-                System.out.println(
-                        "Could not update file status."
-                );
-
-                return false;
-            }
-
-        } catch (SQLException e) {
 
             System.out.println(
-                    "Database error while deleting file."
+                    "File not found or is already inactive. File ID: " + fileId
             );
-
-            e.printStackTrace();
-
             return false;
 
-        } catch (IOException e) {
-
-            System.out.println(
-                    "Error while deleting physical file."
-            );
-
+        } catch (SQLException e) {
+            System.err.println("Database error while deactivating file.");
             e.printStackTrace();
-
             return false;
         }
     }
-
-
 // MODIFY FILE
 
     public boolean modifyFile(
@@ -744,4 +644,149 @@ public class FileService {
             return false;
         }
     }
+    //publish resourse
+    public boolean publishResource(
+            int fileId,
+            int ownerId,
+            String resourceType,
+            String title,
+            String description,
+            Timestamp dueDate) {
+
+        if (!"NOTE".equals(resourceType)
+                && !"ASSIGNMENT".equals(resourceType)) {
+            return false;
+        }
+
+        if (title == null || title.isBlank()) {
+            return false;
+        }
+
+        String query =
+                "INSERT INTO Shared_Resources " +
+                        "(file_id, resource_type, title, description, due_date) " +
+                        "SELECT file_id, ?, ?, ?, ? " +
+                        "FROM Files " +
+                        "WHERE file_id = ? " +
+                        "AND owner_id = ? " +
+                        "AND status = 'active'";
+
+        try (Connection conn = DriverManager.getConnection(
+                URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setString(1, resourceType);
+            stmt.setString(2, title.trim());
+            stmt.setString(3, description);
+            stmt.setTimestamp(4, dueDate);
+            stmt.setInt(5, fileId);
+            stmt.setInt(6, ownerId);
+
+            return stmt.executeUpdate() == 1;
+
+        } catch (SQLException e) {
+            System.err.println("Could not publish resource.");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public List<SharedResource> getPublishedResources() {
+
+        List<SharedResource> resources = new ArrayList<>();
+
+        String query =
+                "SELECT sr.resource_id, f.file_id, f.file_name, " +
+                        "f.file_type, f.file_size, f.owner_id, " +
+                        "sr.resource_type, sr.title, sr.description, sr.due_date " +
+                        "FROM Shared_Resources sr " +
+                        "JOIN Files f ON sr.file_id = f.file_id " +
+                        "WHERE sr.published = TRUE " +
+                        "AND f.status = 'active' " +
+                        "ORDER BY sr.created_at DESC";
+
+        try (Connection conn = DriverManager.getConnection(
+                URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Timestamp deadline = rs.getTimestamp("due_date");
+
+                resources.add(new SharedResource(
+                        rs.getInt("resource_id"),
+                        rs.getInt("file_id"),
+                        rs.getString("file_name"),
+                        rs.getString("file_type"),
+                        rs.getLong("file_size"),
+                        rs.getInt("owner_id"),
+                        rs.getString("resource_type"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        deadline == null ? null : deadline.toString()
+                ));
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Could not retrieve published resources.");
+            e.printStackTrace();
+        }
+
+        return resources;
+    }
+
+
+    public boolean unpublishResource(int resourceId, int ownerId) {
+
+        String query =
+                "UPDATE Shared_Resources sr " +
+                        "JOIN Files f ON sr.file_id = f.file_id " +
+                        "SET sr.published = FALSE " +
+                        "WHERE sr.resource_id = ? " +
+                        "AND f.owner_id = ? " +
+                        "AND f.status = 'active'";
+
+        try (Connection conn = DriverManager.getConnection(
+                URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, resourceId);
+            stmt.setInt(2, ownerId);
+
+            return stmt.executeUpdate() == 1;
+
+        } catch (SQLException e) {
+            System.err.println("Could not unpublish resource.");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean isPublishedResource(int fileId) {
+
+        String query =
+                "SELECT 1 " +
+                        "FROM Shared_Resources sr " +
+                        "JOIN Files f ON sr.file_id = f.file_id " +
+                        "WHERE sr.file_id = ? " +
+                        "AND sr.published = TRUE " +
+                        "AND f.status = 'active'";
+
+        try (Connection conn = DriverManager.getConnection(
+                URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, fileId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Could not check published resource.");
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }

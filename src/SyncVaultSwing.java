@@ -17,6 +17,8 @@ import Student.StudentDashboard;
 import java.awt.*;
 import java.util.List;
 import client.Session;
+import Teacher.SharedResourcesPanel;
+import java.io.IOException;
 public class SyncVaultSwing {
 
     private static final Color NAVY = new Color(25, 27, 45);
@@ -2064,6 +2066,229 @@ public class SyncVaultSwing {
                 BorderLayout.CENTER
         );
 
+        JButton deleteButton = new JButton("Deactivate selected file");
+        deleteButton.setFocusPainted(false);
+
+        deleteButton.addActionListener(e -> {
+
+            int selectedRow = table.getSelectedRow();
+
+            // 1. Check file selection
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Please select a file to deactivate.",
+                        "No File Selected",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            // 2. Get file ID from the selected table row
+            int modelRow = table.convertRowIndexToModel(selectedRow);
+            int fileId = Integer.parseInt(
+                    table.getModel().getValueAt(modelRow, 0).toString()
+            );
+
+            // 3. Confirm deactivation
+            int choice = JOptionPane.showConfirmDialog(
+                    null,
+                    "Are you sure you want to deactivate file ID "
+                            + fileId + "?\n\n"
+                            + "The file record will be retained, "
+                            + "and the physical file will not be deleted.",
+                    "Confirm Deactivation",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            if (choice != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            // 4. Get authenticated session
+            AuthenticatedUser loggedInUser = Session.getUser();
+
+            if (loggedInUser == null
+                    || loggedInUser.getSessionToken() == null) {
+
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Your session has expired. Please log in again.",
+                        "Authentication Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            // 5. Send request to the server
+            try {
+                boolean success = new FileClientService().deleteFile(
+                        fileId,
+                        loggedInUser.getSessionToken()
+                );
+
+                if (success) {
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "File deactivated successfully.",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+
+                    // Refresh the Files page
+                    showDashboard();
+
+                } else {
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Could not deactivate the file.\n"
+                                    + "It may already be inactive.",
+                            "Deactivation Failed",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Error communicating with the server:\n"
+                                + ex.getMessage(),
+                        "Server Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+        });
+        JButton downloadButton = new JButton("↓ Download selected file");
+        downloadButton.setFocusPainted(false);
+
+        JPanel downloadPanel = new JPanel(
+                new FlowLayout(FlowLayout.RIGHT, 12, 10)
+        );
+        downloadPanel.setBackground(Color.WHITE);
+        downloadPanel.add(downloadButton);
+        if ("Admin".equalsIgnoreCase(role)) {
+            downloadPanel.add(deleteButton);
+        }
+
+        p.add(
+                downloadPanel,
+                BorderLayout.SOUTH
+        );
+
+        downloadButton.addActionListener(e -> {
+
+            int selectedRow = table.getSelectedRow();
+
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(
+                        p,
+                        "Please select a file first.",
+                        "No File Selected",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int modelRow = table.convertRowIndexToModel(selectedRow);
+
+            Object idValue = model.getValueAt(modelRow, 0);
+            Object statusValue = model.getValueAt(modelRow, 4);
+
+            if (!(idValue instanceof Number)) {
+                JOptionPane.showMessageDialog(
+                        p,
+                        "The selected row does not contain a valid file ID.",
+                        "Invalid File",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            if (statusValue == null ||
+                    !"active".equalsIgnoreCase(statusValue.toString())) {
+                JOptionPane.showMessageDialog(
+                        p,
+                        "Only active files can be downloaded.",
+                        "File Unavailable",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            AuthenticatedUser loggedInUser = Session.getUser();
+
+            if (loggedInUser == null ||
+                    loggedInUser.getSessionToken() == null ||
+                    loggedInUser.getSessionToken().isBlank()) {
+                JOptionPane.showMessageDialog(
+                        p,
+                        "Your session has expired. Please sign in again.",
+                        "Session Required",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Choose download destination");
+            chooser.setFileSelectionMode(
+                    JFileChooser.DIRECTORIES_ONLY
+            );
+
+            if (chooser.showSaveDialog(p) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            int fileId = ((Number) idValue).intValue();
+            String destinationDirectory =
+                    chooser.getSelectedFile().getAbsolutePath();
+
+            downloadButton.setEnabled(false);
+
+            try {
+                FileClientService downloadService = new FileClientService();
+
+                boolean success = downloadService.downloadFile(
+                        fileId,
+                        destinationDirectory,
+                        loggedInUser.getSessionToken()
+                );
+
+                if (success) {
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "File downloaded successfully to:\n"
+                                    + destinationDirectory,
+                            "Download Complete",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                } else {
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "The download failed. Check the client console "
+                                    + "for the server's error response.",
+                            "Download Failed",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                JOptionPane.showMessageDialog(
+                        p,
+                        "Download failed:\n" + ex.getMessage(),
+                        "Download Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+
+            } finally {
+                downloadButton.setEnabled(true);
+            }
+        });
 
         try {
 
@@ -2354,7 +2579,20 @@ public class SyncVaultSwing {
 
             if (role.equalsIgnoreCase("Teacher")) {
 
-                return new TeacherSubmissionPanel().getPanel();
+                AuthenticatedUser user = Session.getUser();
+
+                if (user == null ||
+                        user.getSessionToken() == null ||
+                        user.getSessionToken().isBlank()) {
+
+                    throw new IllegalStateException(
+                            "Teacher session is missing. Please sign in again."
+                    );
+                }
+
+                return new TeacherSubmissionPanel(
+                        user.getSessionToken()
+                ).getPanel();
 
             } else {
 
@@ -2367,7 +2605,7 @@ public class SyncVaultSwing {
         }
 
         if (currentPage.equals("File versions")) {
-            return fileCard();
+            return fileVersionsCard();
         }
 
 
@@ -2537,8 +2775,144 @@ public class SyncVaultSwing {
                     scrollPane,
                     BorderLayout.CENTER
             );
+            JButton downloadButton = new JButton("↓ Download selected file");
+            downloadButton.setFocusPainted(false);
 
+            JPanel downloadPanel = new JPanel(
+                    new FlowLayout(FlowLayout.RIGHT, 12, 10)
+            );
+            downloadPanel.setBackground(Color.WHITE);
+            downloadPanel.add(downloadButton);
 
+            p.add(
+                    downloadPanel,
+                    BorderLayout.SOUTH
+            );
+
+            downloadButton.addActionListener(e -> {
+
+                int selectedRow = table.getSelectedRow();
+
+                if (selectedRow == -1) {
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "Please select a file first.",
+                            "No File Selected",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                    return;
+                }
+
+                int modelRow = table.convertRowIndexToModel(selectedRow);
+
+                Object idValue = model.getValueAt(modelRow, 0);
+                Object statusValue = model.getValueAt(modelRow, 4);
+
+                if (!(idValue instanceof Number)) {
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "The selected row does not contain a valid file ID.",
+                            "Invalid File",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                    return;
+                }
+
+                if (statusValue == null ||
+                        !"active".equalsIgnoreCase(statusValue.toString())) {
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "Only active files can be downloaded.",
+                            "File Unavailable",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                    return;
+                }
+
+                AuthenticatedUser loggedInUser = Session.getUser();
+
+                if (loggedInUser == null ||
+                        loggedInUser.getSessionToken() == null ||
+                        loggedInUser.getSessionToken().isBlank()) {
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "Your session has expired. Please sign in again.",
+                            "Session Required",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                    return;
+                }
+
+                JFileChooser chooser = new JFileChooser();
+                chooser.setDialogTitle("Choose download destination");
+                chooser.setFileSelectionMode(
+                        JFileChooser.DIRECTORIES_ONLY
+                );
+
+                if (chooser.showSaveDialog(p) != JFileChooser.APPROVE_OPTION) {
+                    return;
+                }
+
+                int fileId = ((Number) idValue).intValue();
+                String destinationDirectory =
+                        chooser.getSelectedFile().getAbsolutePath();
+
+                downloadButton.setEnabled(false);
+
+                try {
+                    FileClientService downloadService = new FileClientService();
+
+                    boolean success = downloadService.downloadFile(
+                            fileId,
+                            destinationDirectory,
+                            loggedInUser.getSessionToken()
+                    );
+
+                    if (success) {
+                        JOptionPane.showMessageDialog(
+                                p,
+                                "File downloaded successfully to:\n"
+                                        + destinationDirectory,
+                                "Download Complete",
+                                JOptionPane.INFORMATION_MESSAGE
+                        );
+                    } else {
+                        JOptionPane.showMessageDialog(
+                                p,
+                                "The download failed. Check the client console "
+                                        + "for the server's error response.",
+                                "Download Failed",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                    }
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+
+                    JOptionPane.showMessageDialog(
+                            p,
+                            "Download failed:\n" + ex.getMessage(),
+                            "Download Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+
+                } finally {
+                    downloadButton.setEnabled(true);
+                }
+            });
+
+            if (currentPage.equals("Notes & Assignments")) {
+                AuthenticatedUser user = Session.getUser();
+
+                if (user == null || user.getSessionToken() == null) {
+                    return whiteCard();
+                }
+
+                return new SharedResourcesPanel(
+                        user.getSessionToken(),
+                        role
+                ).getPanel();
+            }
             // =================================================
             // LOAD USERS
             // =================================================
@@ -3836,5 +4210,26 @@ public class SyncVaultSwing {
 
 
         return t;
+    }
+    private static JPanel fileVersionsCard() {
+        JPanel p = whiteCard();
+        p.setLayout(new BorderLayout());
+
+        p.add(
+                cardHeader(
+                        "File versions",
+                        "Version history for files"
+                ),
+                BorderLayout.NORTH
+        );
+
+        JLabel message = new JLabel(
+                "File version history is not implemented yet.",
+                SwingConstants.CENTER
+        );
+
+        p.add(message, BorderLayout.CENTER);
+
+        return p;
     }
 }

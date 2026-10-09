@@ -13,7 +13,7 @@ public class DBTest {
 
             System.out.println("Connected to syncvault database successfully.\n");
 
-            //  READ TEST: confirm the seed data is there
+            // w READ TEST: confirm the seed data is there
             String selectQuery =
                     "SELECT u.user_id, u.name, u.email, r.role_name " +
                             "FROM Users u JOIN Roles r ON u.role_id = r.role_id";

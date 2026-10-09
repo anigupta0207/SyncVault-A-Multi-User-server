@@ -6,17 +6,16 @@ public class FileDownloadTest {
 
     public static void main(String[] args) throws Exception {
 
-        FileClientService service =
-                new FileClientService();
+        FileClientService service = new FileClientService();
 
-        boolean result =
-                service.downloadFile(
-                        3,
-                        "C:\\Users\\Arshita\\Downloads"
-                );
+        String sessionToken = "YOUR_VALID_SESSION_TOKEN";
 
-        System.out.println(
-                "Download result: " + result
+        boolean result = service.downloadFile(
+                3,
+                "C:\\Users\\Arshita\\Downloads",
+                sessionToken
         );
+
+        System.out.println("Download result: " + result);
     }
 }

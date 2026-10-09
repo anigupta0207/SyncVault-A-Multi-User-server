@@ -149,7 +149,37 @@ public class FileShareService {
     // =====================================================
     // GET FILES SHARED WITH USER
     // =====================================================
+    public boolean canDownload(int fileId, int userId)
+            throws SQLException {
 
+        String query =
+                "SELECT f.owner_id " +
+                        "FROM Files f " +
+                        "WHERE f.file_id = ? " +
+                        "AND LOWER(f.status) = 'active' " +
+                        "AND (" +
+                        "    f.owner_id = ? " +
+                        "    OR EXISTS (" +
+                        "        SELECT 1 FROM File_Shares fs " +
+                        "        WHERE fs.file_id = f.file_id " +
+                        "        AND fs.shared_with = ? " +
+                        "        AND LOWER(fs.permission) IN ('view', 'modify')" +
+                        "    )" +
+                        ")";
+
+        try (Connection conn = DriverManager.getConnection(
+                URL, DB_USER, DB_PASSWORD);
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, fileId);
+            stmt.setInt(2, userId);
+            stmt.setInt(3, userId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
     public List<FileShare> getSharedFiles(
             int userId) throws SQLException {
 

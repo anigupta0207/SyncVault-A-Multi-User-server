@@ -1,10 +1,12 @@
 package server;
+
 import Admin.AdminUserDataService;
 import Admin.AdminLoginService;
 import auth.AuthenticatedUser;
 import file.FileInfo;
 import file.FileService;
 import Admin.AdminStatsService;
+import file.SharedResource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,17 +17,21 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Base64;
 import java.util.List;
+
 import request.Request;
 import request.RequestService;
+
 import java.io.FileOutputStream;
 import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.InputStream;
 import java.io.OutputStream;
+
 import file.FileShareService;
 import file.FileShare;
 import request.SubmissionService;
+
 public class Server {
 
     private static final int PORT = 5050;
@@ -73,94 +79,96 @@ public class Server {
             );
         }
     }
-// =====================================================
+
+    // =====================================================
 // HANDLE GET USERS
 // =====================================================
-private static void handleUpdateUserRole(
-        String message,
-        PrintWriter output
-) {
+    private static void handleUpdateUserRole(
+            String message,
+            PrintWriter output
+    ) {
 
-    try {
+        try {
 
-        String[] parts =
-                message.split(TAB, -1);
+            String[] parts =
+                    message.split(TAB, -1);
 
-        if (parts.length != 3) {
+            if (parts.length != 3) {
 
-            output.println(
-                    "UPDATE_USER_ROLE_ERROR\tInvalid request"
-            );
-
-            return;
-        }
-
-        int userId =
-                Integer.parseInt(parts[1]);
-
-        int roleId =
-                Integer.parseInt(parts[2]);
-
-        if (roleId < 1 || roleId > 3) {
-
-            output.println(
-                    "UPDATE_USER_ROLE_ERROR\tInvalid role"
-            );
-
-            return;
-        }
-
-        AdminUserDataService userService =
-                new AdminUserDataService();
-
-        boolean updated =
-                userService.updateUserRole(
-                        userId,
-                        roleId
+                output.println(
+                        "UPDATE_USER_ROLE_ERROR\tInvalid request"
                 );
 
-        if (updated) {
+                return;
+            }
+
+            int userId =
+                    Integer.parseInt(parts[1]);
+
+            int roleId =
+                    Integer.parseInt(parts[2]);
+
+            if (roleId < 1 || roleId > 3) {
+
+                output.println(
+                        "UPDATE_USER_ROLE_ERROR\tInvalid role"
+                );
+
+                return;
+            }
+
+            AdminUserDataService userService =
+                    new AdminUserDataService();
+
+            boolean updated =
+                    userService.updateUserRole(
+                            userId,
+                            roleId
+                    );
+
+            if (updated) {
+
+                output.println(
+                        "UPDATE_USER_ROLE_OK"
+                );
+
+            } else {
+
+                output.println(
+                        "UPDATE_USER_ROLE_ERROR\tUser not found"
+                );
+            }
+
+        } catch (NumberFormatException e) {
 
             output.println(
-                    "UPDATE_USER_ROLE_OK"
+                    "UPDATE_USER_ROLE_ERROR\tInvalid user ID or role ID"
             );
 
-        } else {
+        } catch (SQLException e) {
+
+            System.err.println(
+                    "Error while updating user role: "
+                            + e.getMessage()
+            );
 
             output.println(
-                    "UPDATE_USER_ROLE_ERROR\tUser not found"
+                    "UPDATE_USER_ROLE_ERROR\tDatabase error"
+            );
+
+        } catch (Exception e) {
+
+            System.err.println(
+                    "Unexpected error while updating user role: "
+                            + e.getMessage()
+            );
+
+            output.println(
+                    "UPDATE_USER_ROLE_ERROR\tUnexpected server error"
             );
         }
-
-    } catch (NumberFormatException e) {
-
-        output.println(
-                "UPDATE_USER_ROLE_ERROR\tInvalid user ID or role ID"
-        );
-
-    } catch (SQLException e) {
-
-        System.err.println(
-                "Error while updating user role: "
-                        + e.getMessage()
-        );
-
-        output.println(
-                "UPDATE_USER_ROLE_ERROR\tDatabase error"
-        );
-
-    } catch (Exception e) {
-
-        System.err.println(
-                "Unexpected error while updating user role: "
-                        + e.getMessage()
-        );
-
-        output.println(
-                "UPDATE_USER_ROLE_ERROR\tUnexpected server error"
-        );
     }
-}
+
     private static void handleGetUsers(PrintWriter output) {
 
         try {
@@ -198,6 +206,7 @@ private static void handleUpdateUserRole(
             output.println("USERS_END");
         }
     }
+
     private static void handleCreateUser(
             String message,
             PrintWriter output
@@ -265,60 +274,94 @@ private static void handleUpdateUserRole(
             );
         }
     }
+
     private static void handleDownloadFile(
             String message,
             PrintWriter output) {
 
         try {
+            String[] parts = message.split(TAB, -1);
 
-            String[] parts =
-                    message.split(TAB, -1);
-
-            if (parts.length != 2) {
-
-                output.println(
-                        "DOWNLOAD_ERROR\tInvalid request"
-                );
-
+            if (parts.length != 3) {
+                output.println("DOWNLOAD_ERROR\tInvalid request");
                 return;
             }
 
-            int fileId =
-                    Integer.parseInt(parts[1]);
+            int fileId = Integer.parseInt(parts[1]);
+            String token = decode(parts[2]);
 
-            FileService fileService =
-                    new FileService();
+            // Authenticate the caller.
+            AuthenticatedUser user = SessionManager.getUser(token);
 
-            /*
-             * We need a method that returns the
-             * physical file information.
-             */
-            FileInfo file =
-                    fileService.getFileById(fileId);
-
-            if (file == null) {
-
-                output.println(
-                        "DOWNLOAD_ERROR\tFile not found"
-                );
-
+            if (user == null) {
+                output.println("DOWNLOAD_ERROR\tUnauthorized");
                 return;
             }
 
-            Path filePath =
-                    Paths.get(file.getFilePath());
+            int userId = user.getUserId();
+            String role = user.getRole();
+            System.out.println(
+                    "[DOWNLOAD DEBUG] userId=" + userId
+                            + ", role=" + role
+                            + ", fileId=" + fileId
+            );
 
-            if (!Files.exists(filePath)) {
+            FileService fileService = new FileService();
+            FileInfo file = fileService.getFileById(fileId);
 
-                output.println(
-                        "DOWNLOAD_ERROR\tPhysical file not found"
-                );
+            if (file == null ||
+                    !"active".equalsIgnoreCase(file.getStatus())) {
+                output.println("DOWNLOAD_ERROR\tFile unavailable");
+                return;
+            }
+            // Admin can download any active file.
+            boolean allowed =
+                    "Admin".equalsIgnoreCase(role);
 
+            if (!allowed) {
+
+                // Preserve existing owner/share permissions.
+                allowed = new FileShareService()
+                        .canDownload(fileId, userId);
+
+                // Teachers may also download files attached to
+                // pending student submission requests.
+                if (!allowed &&
+                        "Teacher".equalsIgnoreCase(role)) {
+
+                    allowed = new RequestService()
+                            .isAccessibleSubmissionFile(fileId);
+                }
+            }
+            if (!allowed) {
+                allowed = new FileShareService()
+                        .canDownload(fileId, userId);
+            }
+
+            // Any authenticated Student can download a published resource.
+            if (!allowed && "Student".equalsIgnoreCase(role)) {
+                allowed = new FileService()
+                        .isPublishedResource(fileId);
+            }
+            if (!allowed) {
+                output.println("DOWNLOAD_ERROR\tAccess denied");
+                return;
+            }
+            System.out.println(
+                    "[DOWNLOAD DEBUG] allowed=" + allowed
+                            + ", fileId=" + fileId
+                            + ", role=" + role
+            );
+
+            Path filePath = Paths.get(file.getFilePath());
+
+            if (!Files.isRegularFile(filePath) ||
+                    !Files.isReadable(filePath)) {
+                output.println("DOWNLOAD_ERROR\tPhysical file unavailable");
                 return;
             }
 
-            long fileSize =
-                    Files.size(filePath);
+            long fileSize = Files.size(filePath);
 
             output.println(
                     "DOWNLOAD_OK" + TAB +
@@ -326,52 +369,32 @@ private static void handleUpdateUserRole(
                             fileSize
             );
 
-            try (InputStream fileInput =
-                         Files.newInputStream(filePath)) {
-
-                byte[] buffer =
-                        new byte[8192];
-
+            try (InputStream fileInput = Files.newInputStream(filePath)) {
+                byte[] buffer = new byte[8192];
                 int bytesRead;
 
-                while ((bytesRead =
-                        fileInput.read(buffer)) != -1) {
+                while ((bytesRead = fileInput.read(buffer)) != -1) {
+                    String encoded = Base64.getEncoder().encodeToString(
+                            java.util.Arrays.copyOf(buffer, bytesRead));
 
-                    String encoded =
-                            Base64.getEncoder()
-                                    .encodeToString(
-                                            java.util.Arrays.copyOf(
-                                                    buffer,
-                                                    bytesRead
-                                            )
-                                    );
-
-                    output.println(
-                            "DATA" + TAB + encoded
-                    );
+                    output.println("DATA" + TAB + encoded);
                 }
             }
 
             output.println("DOWNLOAD_END");
 
         } catch (NumberFormatException e) {
-
-            output.println(
-                    "DOWNLOAD_ERROR\tInvalid file ID"
-            );
+            output.println("DOWNLOAD_ERROR\tInvalid file ID");
 
         } catch (Exception e) {
-
             System.err.println(
-                    "Error during file download: "
-                            + e.getMessage()
-            );
+                    "Error during authorized download: " + e.getMessage());
 
-            output.println(
-                    "DOWNLOAD_ERROR\tServer error"
-            );
+            output.println("DOWNLOAD_ERROR\tServer error");
         }
+
     }
+
     private static void handleUploadFile(
             String firstMessage,
             BufferedReader input,
@@ -561,6 +584,7 @@ private static void handleUpdateUserRole(
             }
         }
     }
+
     // =====================================================
     // HANDLE CLIENT
     // =====================================================
@@ -680,12 +704,12 @@ private static void handleUpdateUserRole(
             // GET REQUESTS
             // ==========================================
 
-                        if (firstMessage.equals("GET_REQUESTS")) {
+            if (firstMessage.equals("GET_REQUESTS")) {
 
-                            handleGetRequests(output);
+                handleGetRequests(output);
 
-                            return;
-                        }
+                return;
+            }
 
             // ==========================================
             // CREATE REQUEST
@@ -703,6 +727,17 @@ private static void handleUpdateUserRole(
             // ==========================================
             // GET USERS
             // ==========================================
+
+            if (firstMessage.startsWith("GET_PUBLISHED_RESOURCES" + TAB)) {
+                handleGetPublishedResources(firstMessage, output);
+                return;
+            }
+
+            if (firstMessage.startsWith("PUBLISH_RESOURCE" + TAB)) {
+                handlePublishResource(firstMessage, output);
+                return;
+            }
+
             if (firstMessage.startsWith("SUBMIT_FILE" + TAB)) {
                 handleSubmitFile(firstMessage, output);
                 return;
@@ -838,65 +873,191 @@ private static void handleUpdateUserRole(
             );
         }
     }
+
+    private static void handlePublishResource(
+            String message,
+            PrintWriter output) {
+
+        try {
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 7) {
+                output.println("PUBLISH_ERROR" + TAB + "Invalid request");
+                return;
+            }
+
+            int fileId = Integer.parseInt(parts[1]);
+            String resourceType = decode(parts[2]);
+            String title = decode(parts[3]);
+            String description = decode(parts[4]);
+            String dueDateText = decode(parts[5]);
+            String token = decode(parts[6]);
+
+            AuthenticatedUser user = SessionManager.getUser(token);
+
+            if (user == null) {
+                output.println("PUBLISH_ERROR" + TAB + "Unauthorized");
+                return;
+            }
+
+            if (!"Teacher".equalsIgnoreCase(user.getRole())) {
+                output.println("PUBLISH_ERROR" + TAB + "Teachers only");
+                return;
+            }
+
+            java.sql.Timestamp dueDate = null;
+
+            if (!dueDateText.isBlank()) {
+                dueDate = java.sql.Timestamp.valueOf(dueDateText);
+            }
+
+            FileService service = new FileService();
+
+            boolean published = service.publishResource(
+                    fileId,
+                    user.getUserId(),
+                    resourceType,
+                    title,
+                    description,
+                    dueDate
+            );
+
+            if (published) {
+                output.println("PUBLISH_OK");
+                System.out.println(
+                        "Resource published. File ID: " + fileId
+                );
+            } else {
+                output.println(
+                        "PUBLISH_ERROR" + TAB
+                                + "File not found, inactive, or not owned by Teacher"
+                );
+            }
+
+        } catch (IllegalArgumentException e) {
+            output.println("PUBLISH_ERROR" + TAB + "Invalid resource details");
+        } catch (Exception e) {
+            System.err.println("Error publishing resource: " + e.getMessage());
+            output.println("PUBLISH_ERROR" + TAB + "Server error");
+        }
+    }
+
+
+    private static void handleGetPublishedResources(
+            String message,
+            PrintWriter output) {
+
+        try {
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 2) {
+                output.println("RESOURCE_ERROR" + TAB + "Invalid request");
+                return;
+            }
+
+            String token = decode(parts[1]);
+            AuthenticatedUser user = SessionManager.getUser(token);
+
+            if (user == null) {
+                output.println("RESOURCE_ERROR" + TAB + "Unauthorized");
+                return;
+            }
+
+            if (!"Student".equalsIgnoreCase(user.getRole())
+                    && !"Teacher".equalsIgnoreCase(user.getRole())
+                    && !"Admin".equalsIgnoreCase(user.getRole())) {
+                output.println("RESOURCE_ERROR" + TAB + "Access denied");
+                return;
+            }
+
+            FileService service = new FileService();
+
+            for (SharedResource resource : service.getPublishedResources()) {
+                output.println(
+                        "RESOURCE" + TAB
+                                + resource.getResourceId() + TAB
+                                + resource.getFileId() + TAB
+                                + encode(resource.getResourceType()) + TAB
+                                + encode(resource.getTitle()) + TAB
+                                + encode(resource.getDescription() == null
+                                ? "" : resource.getDescription()) + TAB
+                                + encode(resource.getFileName()) + TAB
+                                + encode(resource.getFileType() == null
+                                ? "" : resource.getFileType()) + TAB
+                                + resource.getFileSize() + TAB
+                                + resource.getOwnerId() + TAB
+                                + encode(resource.getDueDate() == null
+                                ? "" : resource.getDueDate())
+                );
+            }
+
+            output.println("RESOURCES_END");
+
+        } catch (Exception e) {
+            System.err.println("Error retrieving published resources: "
+                    + e.getMessage());
+            output.println("RESOURCE_ERROR" + TAB + "Server error");
+        }
+    }
+
     private static void handleDeleteFile(
             String message,
             PrintWriter output) {
 
         try {
+            String[] parts = message.split(TAB, -1);
 
-            String[] parts =
-                    message.split(TAB, -1);
-
-            if (parts.length != 2) {
-
-                output.println(
-                        "DELETE_ERROR\tInvalid request"
-                );
-
+            // 1. Validate request
+            if (parts.length != 3) {
+                output.println("DELETE_ERROR\tInvalid request");
                 return;
             }
 
-            int fileId =
-                    Integer.parseInt(parts[1]);
+            int fileId = Integer.parseInt(parts[1]);
 
-            FileService fileService =
-                    new FileService();
+            // 2. Decode session token
+            String token = decode(parts[2]);
 
-            boolean deleted =
-                    fileService.deleteFile(fileId);
+            // 3. Authenticate user
+            AuthenticatedUser user = SessionManager.getUser(token);
 
-            if (deleted) {
+            if (user == null) {
+                output.println("DELETE_ERROR\tUnauthorized session");
+                return;
+            }
 
+            // 4. Allow only Admin
+            if (!"Admin".equalsIgnoreCase(user.getRole())) {
+                output.println("DELETE_ERROR\tAdmin access required");
+                return;
+            }
+
+            // 5. Deactivate file in database
+            FileService fileService = new FileService();
+            boolean deactivated = fileService.deleteFile(fileId);
+
+            if (deactivated) {
                 output.println("DELETE_OK");
 
                 System.out.println(
-                        "File deleted successfully. File ID: "
-                                + fileId
+                        "File deactivated successfully. File ID: " + fileId
                 );
-
             } else {
-
                 output.println(
-                        "DELETE_ERROR\tFile could not be deleted"
+                        "DELETE_ERROR\tFile could not be deactivated"
                 );
             }
 
         } catch (NumberFormatException e) {
-
-            output.println(
-                    "DELETE_ERROR\tInvalid file ID"
-            );
+            output.println("DELETE_ERROR\tInvalid file ID");
 
         } catch (Exception e) {
-
             System.err.println(
-                    "Error while deleting file: "
-                            + e.getMessage()
+                    "Error while deactivating file: " + e.getMessage()
             );
+            e.printStackTrace();
 
-            output.println(
-                    "DELETE_ERROR\tServer error"
-            );
+            output.println("DELETE_ERROR\tServer error");
         }
     }
     private static void handleCreateRequest(
@@ -1022,6 +1183,7 @@ private static void handleUpdateUserRole(
             output.println("STATS_ERROR");
         }
     }
+
     private static void handleGetRequests(
             PrintWriter output) {
 
@@ -1061,6 +1223,7 @@ private static void handleUpdateUserRole(
             output.println("REQUESTS_ERROR");
         }
     }
+
     private static void handleAuthentication(
             String message,
             PrintWriter output) {
@@ -1237,6 +1400,7 @@ private static void handleUpdateUserRole(
                 StandardCharsets.UTF_8
         );
     }
+
     private static void handleUpdateUserStatus(
             String message,
             PrintWriter output
@@ -1452,6 +1616,7 @@ private static void handleUpdateUserRole(
             }
         }
     }
+
     private static void handleShareFile(
             String message,
             PrintWriter output) {
@@ -1517,6 +1682,7 @@ private static void handleUpdateUserRole(
             );
         }
     }
+
     private static void handleGetSharedFiles(
             String message,
             PrintWriter output) {
@@ -1577,6 +1743,7 @@ private static void handleUpdateUserRole(
             );
         }
     }
+
     private static void handleSubmitFile(
             String message,
             PrintWriter output) {
@@ -1623,6 +1790,7 @@ private static void handleUpdateUserRole(
             );
         }
     }
+
     private static void handleApproveSubmission(
             String message,
             PrintWriter output) {

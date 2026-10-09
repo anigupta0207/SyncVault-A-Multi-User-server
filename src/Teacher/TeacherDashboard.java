@@ -23,6 +23,7 @@ public class TeacherDashboard
                 new String[]{
                         "Overview",
                         "Files",
+                        "Notes & Assignments",
                         "Requests",
                         "Submissions",
                         "File versions",
@@ -32,6 +33,7 @@ public class TeacherDashboard
                 new String[]{
                         "▦",
                         "▤",
+                        "📚",
                         "⇄",
                         "⇧",
                         "◷",

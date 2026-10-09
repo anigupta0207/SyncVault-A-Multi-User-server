@@ -22,8 +22,15 @@ public class TeacherSubmissionPanel {
 
     private List<Request> submissionRequests =
             new ArrayList<>();
+    private final String sessionToken;
+    public TeacherSubmissionPanel(String sessionToken) {
+        if (sessionToken == null || sessionToken.isBlank()) {
+            throw new IllegalArgumentException(
+                    "A valid teacher session token is required."
+            );
+        }
 
-    public TeacherSubmissionPanel() {
+        this.sessionToken = sessionToken;
         createPanel();
         loadSubmissions();
     }
@@ -623,7 +630,8 @@ public class TeacherSubmissionPanel {
             boolean success =
                     fileService.downloadFile(
                             fileId,
-                            destination.getAbsolutePath()
+                            destination.getAbsolutePath(),
+                            sessionToken
                     );
 
             if (success) {

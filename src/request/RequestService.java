@@ -451,4 +451,45 @@ public class RequestService {
             return false;
         }
     }
+    public boolean isAccessibleSubmissionFile(int fileId)
+            throws SQLException {
+
+        String query =
+                "SELECT 1 FROM Requests " +
+                        "WHERE file_id = ? " +
+                        "AND UPPER(request_type) = 'SUBMISSION' " +
+                        "AND LOWER(status) IN ('pending', 'completed') " +
+                        "LIMIT 1";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, fileId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+    public boolean isPendingSubmissionFile(int fileId)
+            throws SQLException {
+
+        String query =
+                "SELECT 1 FROM Requests " +
+                        "WHERE file_id = ? " +
+                        "AND UPPER(request_type) = 'SUBMISSION' " +
+                        "AND LOWER(status) = 'pending' " +
+                        "LIMIT 1";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, fileId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
 }

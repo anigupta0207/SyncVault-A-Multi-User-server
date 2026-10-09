@@ -205,7 +205,8 @@ public class FileClientService {
     }
     public boolean downloadFile(
             int fileId,
-            String destinationDirectory
+            String destinationDirectory,
+            String sessionToken
     ) throws IOException {
 
         Path destination =
@@ -242,8 +243,14 @@ public class FileClientService {
                             )
             ) {
 
+                if (sessionToken == null || sessionToken.isBlank()) {
+                    throw new IOException("You must sign in before downloading.");
+                }
+
                 output.println(
-                        "DOWNLOAD_FILE" + "\t" + fileId
+                        "DOWNLOAD_FILE" + "\t" +
+                                fileId + "\t" +
+                                encode(sessionToken)
                 );
 
                 String response =
@@ -345,57 +352,58 @@ public class FileClientService {
             }
         }
     }
-    public boolean deleteFile(int fileId) throws IOException {
+    public boolean deleteFile(int fileId, String sessionToken)
+            throws IOException {
+
+        if (sessionToken == null || sessionToken.isBlank()) {
+            throw new IllegalArgumentException(
+                    "A valid session token is required."
+            );
+        }
 
         try (Socket socket = new Socket()) {
 
             socket.connect(
-                    new InetSocketAddress(
-                            SERVER_HOST,
-                            SERVER_PORT
-                    ),
+                    new InetSocketAddress(SERVER_HOST, SERVER_PORT),
                     5000
             );
 
             socket.setSoTimeout(10000);
 
             try (
-                    PrintWriter output =
-                            new PrintWriter(
-                                    socket.getOutputStream(),
-                                    true,
-                                    StandardCharsets.UTF_8
-                            );
+                    PrintWriter output = new PrintWriter(
+                            socket.getOutputStream(),
+                            true,
+                            StandardCharsets.UTF_8
+                    );
 
-                    BufferedReader input =
-                            new BufferedReader(
-                                    new InputStreamReader(
-                                            socket.getInputStream(),
-                                            StandardCharsets.UTF_8
-                                    )
+                    BufferedReader input = new BufferedReader(
+                            new InputStreamReader(
+                                    socket.getInputStream(),
+                                    StandardCharsets.UTF_8
                             )
+                    )
             ) {
 
                 output.println(
-                        "DELETE_FILE" + "\t" + fileId
+                        "DELETE_FILE\t" + fileId + "\t"
+                                + java.util.Base64.getUrlEncoder()
+                                .withoutPadding()
+                                .encodeToString(
+                                        sessionToken.getBytes(
+                                                StandardCharsets.UTF_8
+                                        )
+                                )
                 );
 
-                String response =
-                        input.readLine();
+                String response = input.readLine();
 
                 if ("DELETE_OK".equals(response)) {
-
-                    System.out.println(
-                            "File deleted successfully."
-                    );
-
+                    System.out.println("File deleted successfully.");
                     return true;
                 }
 
-                System.out.println(
-                        "Delete failed: " + response
-                );
-
+                System.out.println("Delete failed: " + response);
                 return false;
             }
         }
