@@ -60,8 +60,30 @@ public class FileService {
     }
 
     // UPLOAD FILE
+    public boolean uploadFile(
+            String sourceFilePath,
+            String fileName,
+            int ownerId) {
 
-    public boolean uploadFile(String sourceFilePath, String fileName, int ownerId) {
+        return uploadFileInternal(
+                sourceFilePath,
+                fileName,
+                ownerId
+        ) > 0;
+    }
+
+    public int uploadFileAndGetId(
+            String sourceFilePath,
+            String fileName,
+            int ownerId) {
+
+        return uploadFileInternal(
+                sourceFilePath,
+                fileName,
+                ownerId
+        );
+    }
+    private int uploadFileInternal(String sourceFilePath, String fileName, int ownerId) {
 
         String insertQuery =
                 "INSERT INTO Files " +
@@ -75,7 +97,7 @@ public class FileService {
 
         if (!Files.exists(sourceFile)) {
             System.out.println("Source file does not exist.");
-            return false;
+            return -1;
         }
 
         long fileSize;
@@ -85,7 +107,7 @@ public class FileService {
         } catch (IOException e) {
             System.out.println("Could not determine file size.");
             e.printStackTrace();
-            return false;
+            return -1;
         }
 
         try (Connection conn =
@@ -105,7 +127,7 @@ public class FileService {
 
             if (rowsInserted != 1) {
                 System.out.println("File metadata insertion failed.");
-                return false;
+                return -1;
             }
 
             int fileId;
@@ -114,7 +136,7 @@ public class FileService {
 
                 if (!rs.next()) {
                     System.out.println("Could not get generated file ID.");
-                    return false;
+                    return -1;
                 }
 
                 fileId = rs.getInt(1);
@@ -155,7 +177,7 @@ public class FileService {
                     Files.deleteIfExists(destination);
 
                     System.out.println("Could not update file path.");
-                    return false;
+                    return -1;
                 }
             }
 
@@ -164,19 +186,19 @@ public class FileService {
             System.out.println("File Name: " + fileName);
             System.out.println("Stored At: " + destination);
 
-            return true;
+            return fileId;
 
         } catch (SQLException e) {
 
             System.out.println("Database error during upload.");
             e.printStackTrace();
-            return false;
+            return -1;
 
         } catch (IOException e) {
 
             System.out.println("File error during upload.");
             e.printStackTrace();
-            return false;
+            return -1;
         }
     }
     // type of file

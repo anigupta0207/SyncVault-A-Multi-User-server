@@ -404,39 +404,62 @@ public class Server {
 
         try {
 
-            String[] parts =
-                    firstMessage.split(TAB, -1);
 
-            if (parts.length != 4) {
+            String[] parts = firstMessage.split(TAB, -1);
 
-                output.println(
-                        "UPLOAD_ERROR\tInvalid request"
-                );
+            boolean resourceUpload =
+                    parts.length > 0
+                            && "UPLOAD_RESOURCE_FILE".equals(parts[0]);
 
-                return;
+            String fileName;
+            long expectedSize;
+            int ownerId;
+
+            if (resourceUpload) {
+                // Format:
+                // UPLOAD_RESOURCE_FILE, encoded filename, file size, encoded session token
+                if (parts.length != 4) {
+                    output.println("UPLOAD_ERROR\tInvalid request");
+                    return;
+                }
+
+                fileName = decode(parts[1]);
+                expectedSize = Long.parseLong(parts[2]);
+                String sessionToken = decode(parts[3]);
+
+                // TODO: Resolve this token using your existing session/authentication
+                // service and obtain the authenticated user's ID.
+                // Do not trust an owner ID supplied by the client.
+
+                AuthenticatedUser authenticatedUser =
+                        SessionManager.getUser(sessionToken);
+
+                if (authenticatedUser == null
+                        || !"Teacher".equalsIgnoreCase(authenticatedUser.getRole())) {
+                    output.println("UPLOAD_ERROR\tUnauthorized");
+                    return;
+                }
+
+                ownerId = authenticatedUser.getUserId();
+
+            } else {
+                // Preserve existing normal upload format:
+                // UPLOAD_FILE, owner ID, encoded filename, file size
+                if (parts.length != 4) {
+                    output.println("UPLOAD_ERROR\tInvalid request");
+                    return;
+                }
+
+                ownerId = Integer.parseInt(parts[1]);
+                fileName = decode(parts[2]);
+                expectedSize = Long.parseLong(parts[3]);
             }
-
-            int ownerId =
-                    Integer.parseInt(parts[1]);
-
-            String fileName =
-                    decode(parts[2]);
-
-            long expectedSize =
-                    Long.parseLong(parts[3]);
 
             if (expectedSize < 0) {
-
-                output.println(
-                        "UPLOAD_ERROR\tInvalid file size"
-                );
-
+                output.println("UPLOAD_ERROR\tInvalid file size");
                 return;
             }
 
-            /*
-             * Create temporary server-side file.
-             */
             Path tempDirectory =
                     java.nio.file.Paths.get(
                             "storage",
@@ -522,24 +545,23 @@ public class Server {
             FileService fileService =
                     new FileService();
 
-            boolean uploaded =
-                    fileService.uploadFile(
-                            tempFile.toString(),
-                            fileName,
-                            ownerId
-                    );
+            int fileId = fileService.uploadFileAndGetId(
+                    tempFile.toString(),
+                    fileName,
+                    ownerId
+            );
 
-            if (uploaded) {
-
-                output.println("UPLOAD_OK");
+            if (fileId > 0) {
+                output.println("UPLOAD_OK\t" + fileId);
 
                 System.out.println(
-                        "File uploaded from client: "
-                                + fileName
+                        "File uploaded from client: " + fileName
                 );
 
+                System.out.println(
+                        "Generated file ID: " + fileId
+                );
             } else {
-
                 output.println(
                         "UPLOAD_ERROR\tFileService failed"
                 );
@@ -637,7 +659,10 @@ public class Server {
             // ==========================================
             // UPLOAD FILE
             // ==========================================
-
+            if (firstMessage.startsWith("UPLOAD_RESOURCE_FILE" + TAB)) {
+                handleUploadFile(firstMessage, input, output);
+                return;
+            }
             if (firstMessage.startsWith("UPLOAD_FILE" + TAB)) {
 
                 handleUploadFile(

@@ -1,5 +1,5 @@
 package client;
-
+import file.SharedResource;
 import file.FileInfo;
 import file.FileShare;
 import java.io.*;
@@ -111,13 +111,18 @@ public class FileClientService {
                 StandardCharsets.UTF_8
         );
     }
+
     public boolean uploadFile(String filePath, int ownerId) throws IOException {
+        return uploadFileAndGetId(filePath, ownerId) > 0;
+    }
+
+    public int uploadFileAndGetId(String filePath, int ownerId) throws IOException {
 
         Path sourceFile = Paths.get(filePath);
 
         if (!Files.exists(sourceFile) || !Files.isRegularFile(sourceFile)) {
             System.out.println("File does not exist: " + filePath);
-            return false;
+            return -1;
         }
 
         String fileName = sourceFile.getFileName().toString();
@@ -147,9 +152,6 @@ public class FileClientService {
                     )
             ) {
 
-                /*
-                 * Send upload metadata.
-                 */
                 output.println(
                         "UPLOAD_FILE" + "\t" +
                                 ownerId + "\t" +
@@ -157,52 +159,189 @@ public class FileClientService {
                                 fileSize
                 );
 
-                /*
-                 * Send file in chunks.
-                 */
-                try (InputStream fileInput =
-                             Files.newInputStream(sourceFile)) {
+                try (InputStream fileInput = Files.newInputStream(sourceFile)) {
 
                     byte[] buffer = new byte[8192];
-
                     int bytesRead;
 
                     while ((bytesRead = fileInput.read(buffer)) != -1) {
 
-                        String encodedChunk =
-                                Base64.getEncoder()
-                                        .encodeToString(
-                                                java.util.Arrays.copyOf(
-                                                        buffer,
-                                                        bytesRead
-                                                )
-                                        );
+                        String encodedChunk = Base64.getEncoder()
+                                .encodeToString(
+                                        java.util.Arrays.copyOf(buffer, bytesRead)
+                                );
 
-                        output.println(
-                                "DATA" + "\t" + encodedChunk
-                        );
+                        output.println("DATA" + "\t" + encodedChunk);
+
+                        if (output.checkError()) {
+                            throw new IOException("Failed to send upload data.");
+                        }
                     }
                 }
 
-                /*
-                 * Tell server upload is complete.
-                 */
                 output.println("UPLOAD_END");
+
+                if (output.checkError()) {
+                    throw new IOException("Failed to finish sending upload.");
+                }
 
                 String response = input.readLine();
 
-                if ("UPLOAD_OK".equals(response)) {
-                    return true;
+                if (response == null) {
+                    throw new IOException("Server disconnected during upload.");
                 }
 
-                System.out.println(
-                        "Upload failed: " + response
-                );
+                String[] parts = response.split("\t", -1);
 
-                return false;
+                if (parts.length == 2 && "UPLOAD_OK".equals(parts[0])) {
+                    try {
+                        int fileId = Integer.parseInt(parts[1]);
+
+                        if (fileId > 0) {
+                            return fileId;
+                        }
+                    } catch (NumberFormatException e) {
+                        throw new IOException("Invalid file ID from server.", e);
+                    }
+                }
+
+                // Backward compatibility with servers returning only UPLOAD_OK.
+                if ("UPLOAD_OK".equals(response)) {
+                    throw new IOException(
+                            "Upload succeeded, but the server did not return the file ID."
+                    );
+                }
+
+                System.out.println("Upload failed: " + response);
+                return -1;
             }
         }
     }
+
+    public int uploadResourceFile(
+            String filePath,
+            String sessionToken
+    ) throws IOException {
+
+        Path sourceFile = Paths.get(filePath);
+
+        if (!Files.exists(sourceFile) || !Files.isRegularFile(sourceFile)) {
+            throw new IOException("Selected file does not exist.");
+        }
+
+        String fileName = sourceFile.getFileName().toString();
+        long fileSize = Files.size(sourceFile);
+
+        try (Socket socket = new Socket()) {
+            socket.connect(
+                    new InetSocketAddress(SERVER_HOST, SERVER_PORT),
+                    5000
+            );
+            socket.setSoTimeout(30000);
+
+            try (
+                    PrintWriter output = new PrintWriter(
+                            socket.getOutputStream(),
+                            true,
+                            StandardCharsets.UTF_8
+                    );
+                    BufferedReader input = new BufferedReader(
+                            new InputStreamReader(
+                                    socket.getInputStream(),
+                                    StandardCharsets.UTF_8
+                            )
+                    )
+            ) {
+                output.println(
+                        "UPLOAD_RESOURCE_FILE\t"
+                                + encode(fileName) + "\t"
+                                + fileSize + "\t"
+                                + encode(sessionToken)
+                );
+
+                try (InputStream fileInput = Files.newInputStream(sourceFile)) {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+
+                    while ((bytesRead = fileInput.read(buffer)) != -1) {
+                        String encodedChunk = Base64.getEncoder()
+                                .encodeToString(
+                                        java.util.Arrays.copyOf(buffer, bytesRead)
+                                );
+
+                        output.println("DATA\t" + encodedChunk);
+                    }
+                }
+
+                output.println("UPLOAD_END");
+                System.out.println("DEBUG CLIENT: Uploading resource");
+                System.out.println("DEBUG CLIENT: File name = " + fileName);
+                System.out.println("DEBUG CLIENT: File size = " + fileSize);
+                System.out.println("DEBUG CLIENT: Session token present = "
+                        + (sessionToken != null && !sessionToken.isBlank()));
+
+                String response = input.readLine();
+
+                if (response == null) {
+                    throw new IOException("Server disconnected during upload.");
+                }
+
+                String[] responseParts = response.split("\t", -1);
+
+                if (responseParts.length == 2
+                        && "UPLOAD_OK".equals(responseParts[0])) {
+                    return Integer.parseInt(responseParts[1]);
+                }
+
+                throw new IOException("Resource upload failed: " + response);
+            }
+        }
+    }
+
+    public boolean publishResourceToServer(
+            int fileId,
+            String resourceType,
+            String title,
+            String description,
+            String dueDateText,
+            String sessionToken
+    ) throws IOException {
+
+        try (Socket socket = new Socket()) {
+            socket.connect(
+                    new InetSocketAddress(SERVER_HOST, SERVER_PORT),
+                    5000
+            );
+            socket.setSoTimeout(30000);
+
+            try (
+                    PrintWriter output = new PrintWriter(
+                            socket.getOutputStream(),
+                            true,
+                            StandardCharsets.UTF_8
+                    );
+                    BufferedReader input = new BufferedReader(
+                            new InputStreamReader(
+                                    socket.getInputStream(),
+                                    StandardCharsets.UTF_8
+                            )
+                    )
+            ) {
+                output.println(
+                        "PUBLISH_RESOURCE\t"
+                                + fileId + "\t"
+                                + encode(resourceType) + "\t"
+                                + encode(title) + "\t"
+                                + encode(description == null ? "" : description) + "\t"
+                                + encode(dueDateText == null ? "" : dueDateText) + "\t"
+                                + encode(sessionToken)
+                );
+
+                return "PUBLISH_OK".equals(input.readLine());
+            }
+        }
+    }
+
     public boolean downloadFile(
             int fileId,
             String destinationDirectory,
@@ -821,4 +960,81 @@ public class FileClientService {
 
         return false;
     }
+
+    public List<SharedResource> getPublishedResources(
+            String sessionToken
+    ) throws IOException {
+
+        List<SharedResource> resources = new ArrayList<>();
+
+        if (sessionToken == null || sessionToken.isBlank()) {
+            throw new IOException("A valid session token is required.");
+        }
+
+        try (Socket socket = new Socket()) {
+            socket.connect(
+                    new InetSocketAddress(SERVER_HOST, SERVER_PORT),
+                    5000
+            );
+
+            socket.setSoTimeout(10000);
+
+            try (
+                    PrintWriter output = new PrintWriter(
+                            socket.getOutputStream(),
+                            true,
+                            StandardCharsets.UTF_8
+                    );
+
+                    BufferedReader input = new BufferedReader(
+                            new InputStreamReader(
+                                    socket.getInputStream(),
+                                    StandardCharsets.UTF_8
+                            )
+                    )
+            ) {
+                output.println(
+                        "GET_PUBLISHED_RESOURCES\t" + encode(sessionToken)
+                );
+
+                String line;
+
+                while ((line = input.readLine()) != null) {
+                    if ("RESOURCES_END".equals(line)) {
+                        break;
+                    }
+
+                    if (line.startsWith("RESOURCE_ERROR")) {
+                        throw new IOException(line);
+                    }
+
+                    if (!line.startsWith("RESOURCE\t")) {
+                        continue;
+                    }
+
+                    String[] p = line.split("\t", -1);
+
+                    if (p.length != 11) {
+                        throw new IOException("Invalid resource response.");
+                    }
+
+                    resources.add(new SharedResource(
+                            Integer.parseInt(p[1]),
+                            Integer.parseInt(p[2]),
+                            decode(p[6]),
+                            decode(p[7]),
+                            Long.parseLong(p[8]),
+                            Integer.parseInt(p[9]),
+                            decode(p[3]),
+                            decode(p[4]),
+                            decode(p[5]),
+                            decode(p[10])
+                    ));
+                }
+            }
+        }
+
+        return resources;
+    }
+
 }

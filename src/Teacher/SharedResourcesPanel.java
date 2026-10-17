@@ -39,10 +39,25 @@ public class SharedResourcesPanel {
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> loadResources());
 
+        JButton publishButton = new JButton("Publish Resource");
+        publishButton.addActionListener(e -> publishResource());
+
+        if (!"Teacher".equalsIgnoreCase(role)) {
+            publishButton.setVisible(false);
+        }
+
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
+
+        JPanel headerButtons = new JPanel(
+                new FlowLayout(FlowLayout.RIGHT, 10, 0)
+        );
+        headerButtons.setOpaque(false);
+        headerButtons.add(publishButton);
+        headerButtons.add(refreshButton);
+
         header.add(title, BorderLayout.WEST);
-        header.add(refreshButton, BorderLayout.EAST);
+        header.add(headerButtons, BorderLayout.EAST);
 
         panel.add(header, BorderLayout.NORTH);
 
@@ -84,17 +99,43 @@ public class SharedResourcesPanel {
     private void loadResources() {
         model.setRowCount(0);
 
-        // Client-server loading will be connected here next.
-        model.addRow(new Object[]{
-                "-", "-", "Connecting resource service next",
-                "-", "-"
-        });
+        try {
+            FileClientService service = new FileClientService();
+
+            resources = service.getPublishedResources(sessionToken);
+
+            for (SharedResource resource : resources) {
+                model.addRow(new Object[]{
+                        resource.getFileId(),
+                        resource.getResourceType(),
+                        resource.getTitle(),
+                        resource.getFileName(),
+                        resource.getDueDate().isBlank()
+                                ? "-"
+                                : resource.getDueDate()
+                });
+            }
+
+            if (resources.isEmpty()) {
+                model.addRow(new Object[]{
+                        "-", "-", "No published resources yet", "-", "-"
+                });
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Could not load resources:\n" + e.getMessage(),
+                    "Resource Loading Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     private void downloadSelected() {
         int row = table.getSelectedRow();
 
-        if (row == -1) {
+        if (row == -1 || row >= resources.size()) {
             JOptionPane.showMessageDialog(
                     panel,
                     "Please select a resource first."
@@ -102,10 +143,134 @@ public class SharedResourcesPanel {
             return;
         }
 
-        JOptionPane.showMessageDialog(
-                panel,
-                "The resource download connection will be added next."
+        SharedResource resource = resources.get(row);
+
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Choose Download Location");
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+
+        if (chooser.showSaveDialog(panel) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        try {
+            boolean success = new FileClientService().downloadFile(
+                    resource.getFileId(),
+                    chooser.getSelectedFile().getAbsolutePath(),
+                    sessionToken
+            );
+
+            JOptionPane.showMessageDialog(
+                    panel,
+                    success ? "Resource downloaded successfully."
+                            : "Download failed. Check the server response."
+            );
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Download error:\n" + e.getMessage(),
+                    "Download Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+
+    private void publishResource() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select Note or Assignment");
+
+        if (chooser.showOpenDialog(panel) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        JTextField titleField = new JTextField();
+        JComboBox<String> typeBox =
+                new JComboBox<>(new String[]{"NOTE", "ASSIGNMENT"});
+        JTextArea descriptionArea = new JTextArea(4, 20);
+        JTextField deadlineField = new JTextField();
+
+        JPanel form = new JPanel(new GridLayout(0, 1, 5, 5));
+        form.add(new JLabel("Title:"));
+        form.add(titleField);
+        form.add(new JLabel("Type:"));
+        form.add(typeBox);
+        form.add(new JLabel("Description (optional):"));
+        form.add(new JScrollPane(descriptionArea));
+        form.add(new JLabel("Deadline (optional: yyyy-MM-dd HH:mm:ss):"));
+        form.add(deadlineField);
+
+        int choice = JOptionPane.showConfirmDialog(
+                panel, form, "Publish Resource",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
         );
+
+        if (choice != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String title = titleField.getText().trim();
+        String type = (String) typeBox.getSelectedItem();
+        String description = descriptionArea.getText().trim();
+        String deadline = deadlineField.getText().trim();
+
+        if (title.isEmpty()) {
+            JOptionPane.showMessageDialog(panel, "Please enter a title.");
+            return;
+        }
+
+        try {
+            if (!deadline.isEmpty()) {
+                deadline = java.sql.Timestamp.valueOf(deadline).toString();
+            }
+
+            FileClientService service = new FileClientService();
+
+            int fileId = service.uploadResourceFile(
+                    chooser.getSelectedFile().getAbsolutePath(),
+                    sessionToken
+            );
+
+            boolean published = service.publishResourceToServer(
+                    fileId,
+                    type,
+                    title,
+                    description,
+                    deadline,
+                    sessionToken
+            );
+
+            if (published) {
+                JOptionPane.showMessageDialog(
+                        panel, "Resource published successfully."
+                );
+                loadResources();
+            } else {
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "Upload succeeded, but publishing failed. File ID: " + fileId,
+                        "Publishing Failed",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Invalid deadline. Use yyyy-MM-dd HH:mm:ss.",
+                    "Invalid Deadline",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Could not publish resource:\n" + e.getMessage(),
+                    "Publishing Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     public JPanel getPanel() {

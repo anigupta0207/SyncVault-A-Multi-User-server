@@ -3,13 +3,13 @@ import client.FileClientService;
 import client.RequestClientService;
 import request.Request;
 import file.FileInfo;
-
+import java.util.Comparator;
 import java.io.File;
 import javax.swing.*;
-        import javax.swing.border.EmptyBorder;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-        import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.List;
 
 public class TeacherSubmissionPanel {
@@ -385,7 +385,26 @@ public class TeacherSubmissionPanel {
                     new RequestClientService();
 
             List<Request> requests =
-                    requestService.getPendingRequests();
+                    new ArrayList<>(requestService.getPendingRequests());
+
+            requests.sort(
+                    Comparator.comparingInt(Request::getPriority)
+                            .reversed()
+                            .thenComparingInt(Request::getRequestId)
+            );
+
+            System.out.println("=== SORTED SUBMISSION PRIORITIES ===");
+
+            for (Request request : requests) {
+                if ("SUBMISSION".equalsIgnoreCase(request.getRequestType())) {
+                    System.out.println(
+                            "RQ-" + request.getRequestId()
+                                    + " | Priority value: " + request.getPriority()
+                                    + " | Label: " + priorityText(request.getPriority())
+                    );
+                }
+            }
+
 
             for (Request request : requests) {
 

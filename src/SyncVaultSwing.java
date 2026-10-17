@@ -19,6 +19,8 @@ import java.util.List;
 import client.Session;
 import Teacher.SharedResourcesPanel;
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.ArrayList;
 public class SyncVaultSwing {
 
     private static final Color NAVY = new Color(25, 27, 45);
@@ -811,548 +813,7 @@ public class SyncVaultSwing {
 
         frame.repaint();
     }
-    private static void showLegacyDashboard()  {
 
-        JPanel app =
-                new JPanel(
-                        new BorderLayout()
-                );
-
-        app.setBackground(BG);
-
-
-        // =====================================================
-        // SIDEBAR
-        // =====================================================
-
-        JPanel sidebar =
-                new JPanel(
-                        new BorderLayout()
-                );
-
-        sidebar.setBackground(NAVY);
-
-        sidebar.setPreferredSize(
-                new Dimension(
-                        225,
-                        10
-                )
-        );
-
-
-        JPanel sideTop =
-                new JPanel();
-
-        sideTop.setBackground(NAVY);
-
-        sideTop.setLayout(
-                new BoxLayout(
-                        sideTop,
-                        BoxLayout.Y_AXIS
-                )
-        );
-
-
-        JLabel brand =
-                new JLabel("⬡  SyncVault");
-
-        brand.setForeground(Color.WHITE);
-
-        brand.setFont(
-                new Font(
-                        "Segoe UI",
-                        Font.BOLD,
-                        19
-                )
-        );
-
-        brand.setBorder(
-                new EmptyBorder(
-                        22,
-                        20,
-                        20,
-                        12
-                )
-        );
-
-        brand.setAlignmentX(
-                Component.LEFT_ALIGNMENT
-        );
-
-        sideTop.add(brand);
-
-
-        JLabel workspace =
-                new JLabel(
-                        "  ByteForge Workspace   ⌄"
-                );
-
-        workspace.setForeground(
-                new Color(
-                        221,
-                        222,
-                        235
-                )
-        );
-
-        workspace.setOpaque(true);
-
-        workspace.setBackground(NAVY_HI);
-
-        workspace.setBorder(
-                new EmptyBorder(
-                        12,
-                        8,
-                        12,
-                        8
-                )
-        );
-
-        workspace.setAlignmentX(
-                Component.LEFT_ALIGNMENT
-        );
-
-        workspace.setMaximumSize(
-                new Dimension(
-                        205,
-                        42
-                )
-        );
-
-
-        JPanel workspacePad =
-                new JPanel(
-                        new FlowLayout(
-                                FlowLayout.LEFT,
-                                11,
-                                0
-                        )
-                );
-
-        workspacePad.setBackground(NAVY);
-
-        workspacePad.add(workspace);
-
-        sideTop.add(workspacePad);
-
-
-        JLabel navlabel =
-                new JLabel("WORKSPACE");
-
-        navlabel.setForeground(
-                new Color(
-                        120,
-                        125,
-                        147
-                )
-        );
-
-        navlabel.setFont(
-                new Font(
-                        "Segoe UI",
-                        Font.BOLD,
-                        9
-                )
-        );
-
-        navlabel.setBorder(
-                new EmptyBorder(
-                        24,
-                        20,
-                        8,
-                        8
-                )
-        );
-
-        navlabel.setAlignmentX(
-                Component.LEFT_ALIGNMENT
-        );
-
-        sideTop.add(navlabel);
-
-
-        String[] pages = {
-                "Overview",
-                "Files",
-                "Requests",
-                "Submissions",
-                "File versions",
-                "Team & roles",
-                "Audit log",
-                "Settings"
-        };
-
-
-        String[] icons = {
-                "▦",
-                "▤",
-                "⇄",
-                "⇧",
-                "◷",
-                "♧",
-                "☷",
-                "⚙"
-        };
-
-
-        for (
-                int i = 0;
-                i < pages.length;
-                i++
-        ) {
-
-            final String page =
-                    pages[i];
-
-
-            JButton button =
-                    new JButton(
-                            icons[i]
-                                    +
-                                    "   "
-                                    +
-                                    page
-                    );
-
-
-            button.setHorizontalAlignment(
-                    SwingConstants.LEFT
-            );
-
-            button.setForeground(
-                    page.equals(currentPage)
-                            ?
-                            Color.WHITE
-                            :
-                            new Color(
-                                    177,
-                                    180,
-                                    198
-                            )
-            );
-
-            button.setBackground(
-                    page.equals(currentPage)
-                            ?
-                            NAVY_HI
-                            :
-                            NAVY
-            );
-
-            button.setFocusPainted(false);
-
-            button.setBorder(
-                    new EmptyBorder(
-                            10,
-                            18,
-                            10,
-                            8
-                    )
-            );
-
-            button.setFont(
-                    new Font(
-                            "Segoe UI",
-                            Font.PLAIN,
-                            12
-                    )
-            );
-
-
-            button.addActionListener(
-                    e -> {
-
-                        currentPage =
-                                page;
-
-                        showDashboard();
-                    }
-            );
-
-
-            sideTop.add(button);
-        }
-
-
-        sidebar.add(
-                sideTop,
-                BorderLayout.NORTH
-        );
-
-
-        JPanel server =
-                new JPanel();
-
-        server.setBackground(NAVY);
-
-        server.setLayout(
-                new BoxLayout(
-                        server,
-                        BoxLayout.Y_AXIS
-                )
-        );
-
-
-        JLabel online =
-                new JLabel(
-                        "ONLINE  Server connected"
-                );
-
-        online.setForeground(
-                new Color(
-                        137,
-                        213,
-                        183
-                )
-        );
-
-        online.setBorder(
-                new EmptyBorder(
-                        14,
-                        18,
-                        5,
-                        8
-                )
-        );
-
-
-        JLabel address =
-                new JLabel(
-                        "    TCP · 100.93.142.78:5050"
-                );
-
-        address.setForeground(
-                new Color(
-                        125,
-                        130,
-                        151
-                )
-        );
-
-        address.setFont(
-                new Font(
-                        "Segoe UI",
-                        Font.PLAIN,
-                        9
-                )
-        );
-
-        address.setBorder(
-                new EmptyBorder(
-                        0,
-                        8,
-                        14,
-                        8
-                )
-        );
-
-
-        server.add(online);
-
-        server.add(address);
-
-        sidebar.add(
-                server,
-                BorderLayout.SOUTH
-        );
-
-
-        // =====================================================
-        // RIGHT SIDE
-        // =====================================================
-
-        JPanel right =
-                new JPanel(
-                        new BorderLayout()
-                );
-
-        right.setBackground(BG);
-
-
-        JPanel topbar =
-                new JPanel(
-                        new BorderLayout()
-                );
-
-        topbar.setBackground(Color.WHITE);
-
-        topbar.setBorder(
-                BorderFactory.createMatteBorder(
-                        0,
-                        0,
-                        1,
-                        0,
-                        new Color(
-                                234,
-                                236,
-                                243
-                        )
-                )
-        );
-
-
-        JLabel crumb =
-                new JLabel(
-                        "  ByteForge Workspace   /   "
-                                +
-                                currentPage
-                );
-
-        crumb.setForeground(MUTED);
-
-        crumb.setBorder(
-                new EmptyBorder(
-                        18,
-                        18,
-                        18,
-                        10
-                )
-        );
-
-
-        JPanel topRight =
-                new JPanel(
-                        new FlowLayout(
-                                FlowLayout.RIGHT,
-                                12,
-                                12
-                        )
-                );
-
-        topRight.setBackground(Color.WHITE);
-
-
-        JLabel serverStatus =
-                new JLabel(
-                        "CONNECTED  SyncVault Server"
-                );
-
-        serverStatus.setForeground(
-                new Color(
-                        90,
-                        130,
-                        111
-                )
-        );
-
-
-        JLabel roleBadge =
-                new JLabel(role);
-
-        roleBadge.setForeground(PURPLE);
-
-
-        JLabel user =
-                new JLabel(
-                        initials(email)
-                                +
-                                "  "
-                                +
-                                currentUserName
-                                +
-                                "   "
-                );
-
-        user.setForeground(INK);
-
-        user.setFont(
-                new Font(
-                        "Segoe UI",
-                        Font.BOLD,
-                        11
-                )
-        );
-
-
-        JButton logout =
-                new JButton("Sign out");
-
-
-        logout.addActionListener(
-                e -> {
-
-                    role = "User";
-                    Session.clear();
-                    email = "";
-
-                    currentUserName = "";
-
-                    currentPage =
-                            "Overview";
-
-                    showLogin();
-                }
-        );
-
-
-        topRight.add(serverStatus);
-
-        topRight.add(roleBadge);
-
-        topRight.add(user);
-
-        topRight.add(logout);
-
-
-        topbar.add(
-                crumb,
-                BorderLayout.WEST
-        );
-
-        topbar.add(
-                topRight,
-                BorderLayout.EAST
-        );
-
-
-        content =
-                new JPanel(
-                        new BorderLayout()
-                );
-
-        content.setBackground(BG);
-
-        content.setBorder(
-                new EmptyBorder(
-                        25,
-                        30,
-                        30,
-                        30
-                )
-        );
-
-
-        buildPage();
-
-
-        right.add(
-                topbar,
-                BorderLayout.NORTH
-        );
-
-        right.add(
-                content,
-                BorderLayout.CENTER
-        );
-
-
-        app.add(
-                sidebar,
-                BorderLayout.WEST
-        );
-
-        app.add(
-                right,
-                BorderLayout.CENTER
-        );
-
-
-        frame.setContentPane(app);
-
-        frame.revalidate();
-
-        frame.repaint();
-    }
 
 
     // =========================================================
@@ -1388,182 +849,7 @@ public class SyncVaultSwing {
     }
 
 
-    // =========================================================
-    // BUILD PAGE
-    // =========================================================
 
-    private static void buildPage() {
-
-        content.removeAll();
-
-        content.setLayout(
-                new BorderLayout(
-                        0,
-                        18
-                )
-        );
-
-
-        JPanel header =
-                new JPanel(
-                        new BorderLayout()
-                );
-
-        header.setOpaque(false);
-
-
-        JLabel title =
-                new JLabel(
-                        currentPage.equals("Overview")
-                                ?
-                                "Workspace overview"
-                                :
-                                currentPage
-                );
-
-        title.setFont(
-                new Font(
-                        "Segoe UI",
-                        Font.BOLD,
-                        23
-                )
-        );
-
-        title.setForeground(INK);
-
-
-        JLabel subtitle =
-                new JLabel(
-                        subtitle()
-                );
-
-        subtitle.setForeground(MUTED);
-
-        subtitle.setFont(
-                new Font(
-                        "Segoe UI",
-                        Font.PLAIN,
-                        11
-                )
-        );
-
-
-        JPanel titles =
-                new JPanel();
-
-        titles.setOpaque(false);
-
-        titles.setLayout(
-                new BoxLayout(
-                        titles,
-                        BoxLayout.Y_AXIS
-                )
-        );
-
-        titles.add(title);
-
-        titles.add(
-                Box.createVerticalStrut(4)
-        );
-
-        titles.add(subtitle);
-
-
-        JPanel actions =
-                new JPanel(
-                        new FlowLayout(
-                                FlowLayout.RIGHT,
-                                8,
-                                0
-                        )
-                );
-
-        actions.setOpaque(false);
-
-
-        if (role.equals("Student")) {
-
-            actions.add(
-                    actionButton(
-                            "Submit assignment",
-                            true
-                    )
-            );
-
-        } else {
-
-            actions.add(
-                    actionButton(
-                            "＋ New folder",
-                            false
-                    )
-            );
-
-            actions.add(
-                    actionButton(
-                            "⇧ Upload file",
-                            true
-                    )
-            );
-        }
-
-
-        header.add(
-                titles,
-                BorderLayout.WEST
-        );
-
-        header.add(
-                actions,
-                BorderLayout.EAST
-        );
-
-
-        content.add(
-                header,
-                BorderLayout.NORTH
-        );
-
-
-        JPanel body =
-                new JPanel(
-                        new BorderLayout(
-                                0,
-                                16
-                        )
-                );
-
-        body.setOpaque(false);
-
-
-        if (
-                currentPage.equals("Overview")
-        ) {
-
-            body.add(
-                    dashboardContent(),
-                    BorderLayout.CENTER
-            );
-
-        } else {
-
-            body.add(
-                    pageContent(),
-                    BorderLayout.CENTER
-            );
-        }
-
-
-        content.add(
-                body,
-                BorderLayout.CENTER
-        );
-
-
-        content.revalidate();
-
-        content.repaint();
-    }
 
 
     // =========================================================
@@ -2412,7 +1698,12 @@ public class SyncVaultSwing {
                     new RequestClientService();
 
             List<Request> requests =
-                    service.getPendingRequests();
+                    new ArrayList<>(service.getPendingRequests());
+            requests.sort(
+                    Comparator.comparingInt(Request::getPriority)
+                            .reversed()
+                            .thenComparingInt(Request::getRequestId)
+            );
 
             rows = new Object[requests.size()][5];
 
@@ -2901,18 +2192,7 @@ public class SyncVaultSwing {
                 }
             });
 
-            if (currentPage.equals("Notes & Assignments")) {
-                AuthenticatedUser user = Session.getUser();
 
-                if (user == null || user.getSessionToken() == null) {
-                    return whiteCard();
-                }
-
-                return new SharedResourcesPanel(
-                        user.getSessionToken(),
-                        role
-                ).getPanel();
-            }
             // =================================================
             // LOAD USERS
             // =================================================
@@ -3858,7 +3138,36 @@ public class SyncVaultSwing {
 
 
             return p;
+
         }
+
+// =================================================
+// NOTES & ASSIGNMENTS
+// =================================================
+
+        if (currentPage.equals("Notes & Assignments")) {
+
+            System.out.println(
+                    "DEBUG: Notes & Assignments route reached"
+            );
+
+            AuthenticatedUser user = Session.getUser();
+
+            if (user == null ||
+                    user.getSessionToken() == null ||
+                    user.getSessionToken().isBlank()) {
+
+                throw new IllegalStateException(
+                        "Session missing. Please sign in again."
+                );
+            }
+
+            return new SharedResourcesPanel(
+                    user.getSessionToken(),
+                    role
+            ).getPanel();
+        }
+
 
         // =================================================
         // SETTINGS
@@ -3921,10 +3230,8 @@ public class SyncVaultSwing {
                 p.add(label);
             }
 
-
             return p;
         }
-
 
         // =====================================================
         // AUDIT LOG / DEFAULT
