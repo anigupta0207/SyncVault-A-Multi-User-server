@@ -836,9 +836,7 @@ public class FileClientService {
 
         return false;
     }
-// ============================================================
 // APPROVE SUBMISSION
-// ============================================================
 
     public boolean approveSubmission(int requestId) {
 
@@ -897,11 +895,8 @@ public class FileClientService {
 
         return false;
     }
-
-
-// ============================================================
 // REJECT SUBMISSION
-// ============================================================
+
 
     public boolean rejectSubmission(int requestId) {
 

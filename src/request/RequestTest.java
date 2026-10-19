@@ -23,9 +23,7 @@ public class RequestTest {
         }
 
 
-        // ==================================================
         // FCFS QUEUE TEST
-        // ==================================================
 
         System.out.println(
                 "\n=============================================="
@@ -61,10 +59,8 @@ public class RequestTest {
             );
         }
 
-
-        // ==================================================
         // PRIORITY QUEUE TEST
-        // ==================================================
+
 
         System.out.println(
                 "\n=============================================="
@@ -86,17 +82,17 @@ public class RequestTest {
         priorityQueue.displayQueue();
 
 
-        // ==================================================
+
         // REQUEST PROCESSOR
-        // ==================================================
+
 
         RequestProcessor processor =
                 new RequestProcessor();
 
 
-        // ==================================================
+
         // CREATE SHARED WORKER THREADS
-        // ==================================================
+
 
         List<Thread> workers =
                 new ArrayList<>();
@@ -123,10 +119,8 @@ public class RequestTest {
             worker.start();
         }
 
-
-        // ==================================================
         // WAIT FOR ALL WORKERS
-        // ==================================================
+
 
         for (Thread worker : workers) {
 

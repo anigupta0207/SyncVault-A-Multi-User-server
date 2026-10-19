@@ -10,10 +10,7 @@ public class SubmissionService {
                 new RequestService();
     }
 
-
-    // ============================================================
     // SUBMIT FILE
-    // ============================================================
 
     public boolean submitFile(
             int studentId,
@@ -30,10 +27,7 @@ public class SubmissionService {
         return requestId != -1;
     }
 
-
-    // ============================================================
     // SUBMIT FILE AND RETURN REQUEST ID
-    // ============================================================
 
     public int submitFileWithId(
             int studentId,
@@ -47,9 +41,8 @@ public class SubmissionService {
                 priority
         );
     }
-    // ============================================================
 // APPROVE SUBMISSION
-// ============================================================
+
 
     public boolean approveSubmission(int requestId) {
 
@@ -57,9 +50,9 @@ public class SubmissionService {
     }
 
 
-// ============================================================
+
 // REJECT SUBMISSION
-// ============================================================
+
 
     public boolean rejectSubmission(int requestId) {
 

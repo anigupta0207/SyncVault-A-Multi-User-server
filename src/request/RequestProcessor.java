@@ -26,12 +26,9 @@ public class RequestProcessor {
                 "Attempting Request: "
                         + request.getRequestId()
         );
-
-
-        // ========================================================
         // CLAIM REQUEST
         // pending -> processing
-        // ========================================================
+
 
         boolean claimed =
                 requestService.claimRequest(
@@ -57,9 +54,8 @@ public class RequestProcessor {
         );
 
 
-        // ========================================================
+
         // SUBMISSION REQUEST
-        // ========================================================
 
         if ("SUBMISSION".equalsIgnoreCase(
                 request.getRequestType())) {
@@ -86,9 +82,9 @@ public class RequestProcessor {
         }
 
 
-        // ========================================================
+
         // NORMAL REQUEST PROCESSING
-        // ========================================================
+
 
         try {
 
@@ -106,9 +102,8 @@ public class RequestProcessor {
         }
 
 
-        // ========================================================
         // COMPLETE REQUEST
-        // ========================================================
+
 
         boolean completed =
                 requestService.updateRequestStatus(

@@ -13,9 +13,7 @@ public class RequestScheduler {
         processor = new RequestProcessor();
     }
 
-    // ============================================================
     // FCFS SCHEDULING
-    // ============================================================
 
     public void runFCFS(int numberOfWorkers) {
 
@@ -84,10 +82,7 @@ public class RequestScheduler {
 
         waitForWorkers(workers);
     }
-
-    // ============================================================
     // PRIORITY SCHEDULING
-    // ============================================================
 
     public void runPriority(int numberOfWorkers) {
 
@@ -157,9 +152,7 @@ public class RequestScheduler {
         waitForWorkers(workers);
     }
 
-    // ============================================================
     // WAIT FOR WORKERS
-    // ============================================================
 
     private void waitForWorkers(
             Thread[] workers) {

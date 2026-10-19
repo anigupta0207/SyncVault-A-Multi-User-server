@@ -21,9 +21,8 @@ public class SubmissionPanel {
         createPanel();
     }
 
-    // =========================================================
     // CREATE PANEL
-    // =========================================================
+
 
     private void createPanel() {
 
@@ -42,9 +41,8 @@ public class SubmissionPanel {
                 )
         );
 
-        // =====================================================
         // HEADER
-        // =====================================================
+
 
         JPanel header = new JPanel(
                 new BorderLayout()
@@ -109,9 +107,9 @@ public class SubmissionPanel {
                 BorderLayout.NORTH
         );
 
-        // =====================================================
+
         // MAIN CARD
-        // =====================================================
+
 
         JPanel card = new JPanel(
                 new GridBagLayout()
@@ -148,9 +146,8 @@ public class SubmissionPanel {
                         5
                 );
 
-        // =====================================================
         // FILE LABEL
-        // =====================================================
+
 
         JLabel fileTitle = new JLabel(
                 "Assignment File"
@@ -173,9 +170,8 @@ public class SubmissionPanel {
                 gbc
         );
 
-        // =====================================================
         // SELECTED FILE DISPLAY
-        // =====================================================
+
 
         JPanel fileBox = new JPanel(
                 new BorderLayout(15, 0)
@@ -285,9 +281,9 @@ public class SubmissionPanel {
                 gbc
         );
 
-        // =====================================================
+
         // PRIORITY
-        // =====================================================
+
 
         JLabel priorityLabel =
                 new JLabel(
@@ -334,9 +330,9 @@ public class SubmissionPanel {
                 gbc
         );
 
-        // =====================================================
+
         // INFORMATION
-        // =====================================================
+
 
         JLabel information =
                 new JLabel(
@@ -379,9 +375,9 @@ public class SubmissionPanel {
                 gbc
         );
 
-        // =====================================================
+
         // SUBMIT BUTTON
-        // =====================================================
+
 
         JButton submitButton =
                 new JButton(
@@ -422,9 +418,9 @@ public class SubmissionPanel {
         );
     }
 
-    // =========================================================
+
     // CHOOSE FILE
-    // =========================================================
+
 
     private void chooseFile() {
 
@@ -458,9 +454,9 @@ public class SubmissionPanel {
         );
     }
 
-    // =========================================================
+
     // UPLOAD + SUBMIT
-    // =========================================================
+
 
     private void uploadAndSubmit() {
 
@@ -517,9 +513,8 @@ public class SubmissionPanel {
             FileClientService fileService =
                     new FileClientService();
 
-            // =================================================
+
             // STEP 1 — UPLOAD FILE
-            // =================================================
 
             boolean uploaded =
                     fileService.uploadFile(
@@ -539,9 +534,8 @@ public class SubmissionPanel {
                 return;
             }
 
-            // =================================================
             // STEP 2 — FIND THE NEW FILE
-            // =================================================
+
 
             int uploadedFileId =
                     findUploadedFileId(
@@ -563,9 +557,8 @@ public class SubmissionPanel {
                 return;
             }
 
-            // =================================================
             // STEP 3 — CREATE SUBMISSION REQUEST
-            // =================================================
+
 
             boolean submitted =
                     fileService.submitFile(
@@ -586,10 +579,8 @@ public class SubmissionPanel {
 
                 return;
             }
-
-            // =================================================
             // SUCCESS
-            // =================================================
+
 
             JOptionPane.showMessageDialog(
                     panel,
@@ -627,9 +618,8 @@ public class SubmissionPanel {
         }
     }
 
-    // =========================================================
     // FIND UPLOADED FILE
-    // =========================================================
+
 
     private int findUploadedFileId(
             FileClientService fileService,
@@ -672,9 +662,8 @@ public class SubmissionPanel {
         }
     }
 
-    // =========================================================
+
     // PRIORITY
-    // =========================================================
 
     private int getPriorityValue() {
 
@@ -707,9 +696,9 @@ public class SubmissionPanel {
         return "Low";
     }
 
-    // =========================================================
+
     // FILE SIZE
-    // =========================================================
+
 
     private String formatSize(long size) {
 
@@ -739,9 +728,8 @@ public class SubmissionPanel {
         );
     }
 
-    // =========================================================
     // GET PANEL
-    // =========================================================
+
 
     public JPanel getPanel() {
 

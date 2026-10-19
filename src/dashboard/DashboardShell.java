@@ -62,9 +62,7 @@ public abstract class DashboardShell extends JPanel {
 
         setBackground(BG);
 
-        // =====================================================
         // SIDEBAR
-        // =====================================================
 
         JPanel sidebar =
                 new JPanel(
@@ -92,9 +90,7 @@ public abstract class DashboardShell extends JPanel {
                 )
         );
 
-        // -----------------------------------------------------
         // BRAND
-        // -----------------------------------------------------
 
         JLabel brand =
                 new JLabel(
@@ -128,9 +124,7 @@ public abstract class DashboardShell extends JPanel {
 
         sideTop.add(brand);
 
-        // -----------------------------------------------------
         // WORKSPACE
-        // -----------------------------------------------------
 
         JLabel workspace =
                 new JLabel(
@@ -187,10 +181,7 @@ public abstract class DashboardShell extends JPanel {
         sideTop.add(
                 workspacePad
         );
-
-        // -----------------------------------------------------
         // NAVIGATION LABEL
-        // -----------------------------------------------------
 
         JLabel navLabel =
                 new JLabel(
@@ -229,10 +220,7 @@ public abstract class DashboardShell extends JPanel {
         sideTop.add(
                 navLabel
         );
-
-        // -----------------------------------------------------
         // NAVIGATION BUTTONS
-        // -----------------------------------------------------
 
         for (int i = 0; i < pages.length; i++) {
 
@@ -299,10 +287,7 @@ public abstract class DashboardShell extends JPanel {
                 sideTop,
                 BorderLayout.NORTH
         );
-
-        // -----------------------------------------------------
         // SIDEBAR FOOTER
-        // -----------------------------------------------------
 
         JPanel serverPanel =
                 new JPanel();
@@ -391,9 +376,8 @@ public abstract class DashboardShell extends JPanel {
                 BorderLayout.SOUTH
         );
 
-        // =====================================================
         // RIGHT SIDE
-        // =====================================================
+
 
         JPanel right =
                 new JPanel(
@@ -404,9 +388,8 @@ public abstract class DashboardShell extends JPanel {
                 BG
         );
 
-        // -----------------------------------------------------
+
         // TOP BAR
-        // -----------------------------------------------------
 
         JPanel topBar =
                 new JPanel(
@@ -570,9 +553,7 @@ public abstract class DashboardShell extends JPanel {
                 BorderLayout.NORTH
         );
 
-        // -----------------------------------------------------
         // CONTENT
-        // -----------------------------------------------------
 
         content =
                 new JPanel(
@@ -596,10 +577,7 @@ public abstract class DashboardShell extends JPanel {
                 content,
                 BorderLayout.CENTER
         );
-
-        // =====================================================
         // ADD EVERYTHING
-        // =====================================================
 
         add(
                 sidebar,
@@ -610,19 +588,14 @@ public abstract class DashboardShell extends JPanel {
                 right,
                 BorderLayout.CENTER
         );
-
-        // =====================================================
         // INITIAL PAGE
-        // =====================================================
 
         showPage(
                 "Overview"
         );
     }
 
-    // =========================================================
     // PAGE NAVIGATION
-    // =========================================================
 
     private void showPage(
             String page

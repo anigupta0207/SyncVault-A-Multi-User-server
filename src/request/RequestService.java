@@ -13,10 +13,8 @@ import java.util.List;
 
 public class RequestService {
 
-    // ============================================================
     // CREATE REQUEST
     // Existing method - kept for compatibility
-    // ============================================================
 
     public boolean createRequest(
             int userId,
@@ -34,10 +32,7 @@ public class RequestService {
         return requestId != -1;
     }
 
-
-    // ============================================================
     // CREATE REQUEST AND RETURN GENERATED REQUEST ID
-    // ============================================================
 
     public int createRequestWithId(
             int userId,
@@ -120,11 +115,7 @@ public class RequestService {
 
         return -1;
     }
-
-
-    // ============================================================
     // GET PENDING REQUESTS
-    // ============================================================
 
     public List<Request> getPendingRequests() {
 
@@ -188,9 +179,9 @@ public class RequestService {
     }
 
 
-    // ============================================================
+
     // VIEW PENDING REQUESTS
-    // ============================================================
+
 
     public void viewPendingRequests() {
 
@@ -233,10 +224,9 @@ public class RequestService {
     }
 
 
-    // ============================================================
     // CLAIM REQUEST
     // pending -> processing
-    // ============================================================
+
 
     public boolean claimRequest(int requestId) {
 
@@ -291,9 +281,9 @@ public class RequestService {
     }
 
 
-    // ============================================================
+
     // UPDATE REQUEST STATUS
-    // ============================================================
+
 
     public boolean updateRequestStatus(
             int requestId,
@@ -336,10 +326,10 @@ public class RequestService {
             return false;
         }
     }
-    // ============================================================
+
 // APPROVE SUBMISSION
 // processing -> completed
-// ============================================================
+
 
     public boolean approveSubmission(int requestId) {
 
@@ -394,10 +384,10 @@ public class RequestService {
     }
 
 
-// ============================================================
+
 // REJECT SUBMISSION
 // processing -> rejected
-// ============================================================
+
 
     public boolean rejectSubmission(int requestId) {
 

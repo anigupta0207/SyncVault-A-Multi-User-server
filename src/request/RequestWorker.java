@@ -7,10 +7,7 @@ public class RequestWorker implements Runnable {
 
     private final RequestProcessor processor;
 
-
-    // ============================================================
     // FCFS CONSTRUCTOR
-    // ============================================================
 
     public RequestWorker(
             RequestQueue queue,
@@ -20,11 +17,7 @@ public class RequestWorker implements Runnable {
         this.priorityQueue = null;
         this.processor = processor;
     }
-
-
-    // ============================================================
     // PRIORITY CONSTRUCTOR
-    // ============================================================
 
     public RequestWorker(
             PriorityRequestQueue queue,
@@ -52,10 +45,7 @@ public class RequestWorker implements Runnable {
 
             Request request;
 
-
-            // ====================================================
             // PRIORITY QUEUE
-            // ====================================================
 
             if (priorityQueue != null) {
 
@@ -63,10 +53,7 @@ public class RequestWorker implements Runnable {
                         priorityQueue.processNextRequest();
 
             }
-
-            // ====================================================
             // FCFS QUEUE
-            // ====================================================
 
             else {
 
@@ -74,10 +61,7 @@ public class RequestWorker implements Runnable {
                         fcfsQueue.processNextRequest();
             }
 
-
-            // ====================================================
             // NO REQUESTS LEFT
-            // ====================================================
 
             if (request == null) {
 
@@ -96,10 +80,7 @@ public class RequestWorker implements Runnable {
                             + request.getPriority()
             );
 
-
-            // ====================================================
             // PROCESS REQUEST
-            // ====================================================
 
             processor.processRequest(request);
         }
