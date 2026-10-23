@@ -146,9 +146,9 @@ public class FileShareService {
     }
 
 
-    // =====================================================
+
     // GET FILES SHARED WITH USER
-    // =====================================================
+
     public boolean canDownload(int fileId, int userId)
             throws SQLException {
 

@@ -80,9 +80,9 @@ public class Server {
         }
     }
 
-    // =====================================================
+   
 // HANDLE GET USERS
-// =====================================================
+
     private static void handleUpdateUserRole(
             String message,
             PrintWriter output
@@ -607,9 +607,9 @@ public class Server {
         }
     }
 
-    // =====================================================
+   
     // HANDLE CLIENT
-    // =====================================================
+   
     private static void handleClient(Socket clientSocket) {
 
         try (
@@ -1172,9 +1172,9 @@ public class Server {
         }
     }
 
-    // =====================================================
+   
     // AUTHENTICATION
-    // =====================================================
+   
     private static void handleGetStats(PrintWriter output) {
 
         try {
@@ -1323,9 +1323,9 @@ public class Server {
     }
 
 
-    // =====================================================
+   
     // GET FILES FROM DATABASE
-    // =====================================================
+   
 
     private static void handleGetFiles(
             PrintWriter output) {
@@ -1393,9 +1393,9 @@ public class Server {
     }
 
 
-    // =====================================================
+   
     // BASE64 ENCODE
-    // =====================================================
+   
 
     private static String encode(
             String value) {
@@ -1411,9 +1411,9 @@ public class Server {
     }
 
 
-    // =====================================================
+   
     // BASE64 DECODE
-    // =====================================================
+   
 
     private static String decode(
             String value) {
