@@ -514,158 +514,128 @@ public class FileService {
     }
 // MODIFY FILE
 
+
+    // MODIFY FILE WITH LOCKING
     public boolean modifyFile(
             int fileId,
             String newFilePath,
             int userId) {
 
-        String selectQuery =
-                "SELECT file_path, file_name, owner_id, status " +
-                        "FROM Files " +
-                        "WHERE file_id = ?";
+        if (fileId <= 0 || newFilePath == null
+                || newFilePath.isBlank()) {
+            return false;
+        }
 
-        String updateQuery =
-                "UPDATE Files " +
-                        "SET file_size = ? " +
-                        "WHERE file_id = ? " +
-                        "AND status = 'active'";
+        // Acquire the lock before modifying the file.
+        if (!FileLockManager.acquireLock(fileId)) {
+            System.out.println(
+                    "File is currently being modified. Try again later."
+            );
+            return false;
+        }
 
-        try (
-                Connection conn =
-                        DriverManager.getConnection(
-                                URL,
-                                DB_USER,
-                                DB_PASSWORD
-                        );
+        try {
+            String selectQuery =
+                    "SELECT file_path, file_name, owner_id, status " +
+                            "FROM Files WHERE file_id = ?";
 
-                PreparedStatement selectStmt =
-                        conn.prepareStatement(selectQuery)
-        ) {
+            String updateQuery =
+                    "UPDATE Files SET file_size = ? " +
+                            "WHERE file_id = ? AND status = 'active'";
 
-            // Find existing file
-            selectStmt.setInt(1, fileId);
+            try (Connection conn = DriverManager.getConnection(
+                    URL, DB_USER, DB_PASSWORD);
+                 PreparedStatement selectStmt =
+                         conn.prepareStatement(selectQuery)) {
 
-            String existingFilePath;
-            String fileName;
-            int ownerId;
-            String status;
+                selectStmt.setInt(1, fileId);
 
-            try (ResultSet rs = selectStmt.executeQuery()) {
+                String existingFilePath;
+                String fileName;
+                int ownerId;
+                String status;
 
-                if (!rs.next()) {
-                    System.out.println("File not found.");
+                try (ResultSet rs = selectStmt.executeQuery()) {
+                    if (!rs.next()) {
+                        System.out.println("File not found.");
+                        return false;
+                    }
+
+                    existingFilePath = rs.getString("file_path");
+                    fileName = rs.getString("file_name");
+                    ownerId = rs.getInt("owner_id");
+                    status = rs.getString("status");
+                }
+
+                if (!"active".equalsIgnoreCase(status)) {
+                    System.out.println(
+                            "Cannot modify an inactive file."
+                    );
                     return false;
                 }
 
-                existingFilePath = rs.getString("file_path");
-                fileName = rs.getString("file_name");
-                ownerId = rs.getInt("owner_id");
-                status = rs.getString("status");
-            }
-
-            // File must be active
-            if (!"active".equalsIgnoreCase(status)) {
-                System.out.println(
-                        "Cannot modify an inactive file."
-                );
-                return false;
-            }
-
-            // Only owner can modify for now
-            if (ownerId != userId) {
-                System.out.println(
-                        "You are not the owner of this file."
-                );
-                return false;
-            }
-
-            // Check new file
-            Path newFile = Paths.get(newFilePath);
-
-            if (!Files.exists(newFile)) {
-                System.out.println(
-                        "New file does not exist."
-                );
-                return false;
-            }
-
-            // Replace existing physical file
-            Path existingFile =
-                    Paths.get(existingFilePath);
-
-            Files.copy(
-                    newFile,
-                    existingFile,
-                    StandardCopyOption.REPLACE_EXISTING
-            );
-
-            // Get new size
-            long newFileSize =
-                    Files.size(existingFile);
-
-            // Update database
-            try (
-                    PreparedStatement updateStmt =
-                            conn.prepareStatement(updateQuery)
-            ) {
-
-                updateStmt.setLong(1, newFileSize);
-                updateStmt.setInt(2, fileId);
-
-                int rowsUpdated =
-                        updateStmt.executeUpdate();
-
-                if (rowsUpdated == 1) {
-
+                if (ownerId != userId) {
                     System.out.println(
-                            "File modified successfully."
+                            "You are not the owner of this file."
                     );
-
-                    System.out.println(
-                            "File ID: " + fileId
-                    );
-
-                    System.out.println(
-                            "File Name: " + fileName
-                    );
-
-                    System.out.println(
-                            "New File Size: "
-                                    + newFileSize
-                                    + " bytes"
-                    );
-
-                    return true;
+                    return false;
                 }
 
-                System.out.println(
-                        "Could not update file metadata."
+                Path newFile = Paths.get(newFilePath);
+
+                if (!Files.isRegularFile(newFile)) {
+                    System.out.println(
+                            "New file does not exist or is not a regular file."
+                    );
+                    return false;
+                }
+
+                Path existingFile = Paths.get(existingFilePath);
+
+                // Replace the physical file while holding its lock.
+                Files.copy(
+                        newFile,
+                        existingFile,
+                        StandardCopyOption.REPLACE_EXISTING
                 );
 
-                return false;
+                long newFileSize = Files.size(existingFile);
+
+                try (PreparedStatement updateStmt =
+                             conn.prepareStatement(updateQuery)) {
+
+                    updateStmt.setLong(1, newFileSize);
+                    updateStmt.setInt(2, fileId);
+
+                    if (updateStmt.executeUpdate() != 1) {
+                        System.out.println(
+                                "Could not update file metadata."
+                        );
+                        return false;
+                    }
+                }
+
+                System.out.println("File modified successfully.");
+                System.out.println("File ID: " + fileId);
+                System.out.println("File Name: " + fileName);
+                System.out.println(
+                        "New File Size: " + newFileSize + " bytes"
+                );
+
+                return true;
             }
 
-        } catch (SQLException e) {
-
-            System.out.println(
-                    "Database error while modifying file."
-            );
-
+        } catch (SQLException | IOException e) {
+            System.err.println("Error while modifying file.");
             e.printStackTrace();
-
             return false;
 
-        } catch (IOException e) {
-
-            System.out.println(
-                    "Error while modifying physical file."
-            );
-
-            e.printStackTrace();
-
-            return false;
+        } finally {
+            // Always release the lock, including when an error occurs.
+            FileLockManager.releaseLock(fileId);
         }
     }
+
     //publish resourse
     public boolean publishResource(
             int fileId,
