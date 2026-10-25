@@ -1031,5 +1031,74 @@ public class FileClientService {
 
         return resources;
     }
+    //audit logs client version
+    public List<String[]> getAuditLogs(String sessionToken)
+            throws IOException {
+
+        List<String[]> logs = new ArrayList<>();
+
+        if (sessionToken == null || sessionToken.isBlank()) {
+            throw new IOException("Admin session is missing.");
+        }
+
+        try (Socket socket = new Socket()) {
+            socket.connect(
+                    new InetSocketAddress(SERVER_HOST, SERVER_PORT),
+                    5000
+            );
+            socket.setSoTimeout(10000);
+
+            try (
+                    PrintWriter output = new PrintWriter(
+                            socket.getOutputStream(),
+                            true,
+                            StandardCharsets.UTF_8
+                    );
+                    BufferedReader input = new BufferedReader(
+                            new InputStreamReader(
+                                    socket.getInputStream(),
+                                    StandardCharsets.UTF_8
+                            )
+                    )
+            ) {
+                output.println(
+                        "GET_AUDIT_LOG\t" + encode(sessionToken)
+                );
+
+                String response;
+
+                while ((response = input.readLine()) != null) {
+                    if ("AUDIT_END".equals(response)) {
+                        return logs;
+                    }
+
+                    if (response.startsWith("AUDIT_ERROR\t")) {
+                        throw new IOException(
+                                response.substring("AUDIT_ERROR\t".length())
+                        );
+                    }
+
+                    String[] fields = response.split("\t", -1);
+
+                    if (fields.length == 6 &&
+                            "AUDIT_ROW".equals(fields[0])) {
+
+                        logs.add(new String[]{
+                                decode(fields[1]),
+                                decode(fields[2]),
+                                decode(fields[3]),
+                                decode(fields[4]),
+                                decode(fields[5])
+                        });
+                    }
+                }
+            }
+        }
+
+        throw new IOException(
+                "Server disconnected before completing the audit response."
+        );
+    }
+
 
 }

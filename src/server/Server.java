@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Base64;
 import java.util.List;
-
+import audit.AuditLogService;
 import request.Request;
 import request.RequestService;
 
@@ -39,6 +39,77 @@ public class Server {
     private static final String TAB =
             String.valueOf('\t');
 
+
+    private static void handleGetAuditLog(
+            String message,
+            PrintWriter output) {
+
+        try {
+            String[] parts = message.split(TAB, -1);
+
+            if (parts.length != 2) {
+                output.println("AUDIT_ERROR\tInvalid request");
+                return;
+            }
+
+            String token = decode(parts[1]);
+            AuthenticatedUser user = SessionManager.getUser(token);
+
+            String role = user == null ? "" : user.getRole();
+
+            if (user == null ||
+                    (!"Admin".equalsIgnoreCase(role)
+                            && !"Teacher".equalsIgnoreCase(role))) {
+                output.println("AUDIT_ERROR\tUnauthorized");
+                return;
+            }
+
+            for (String[] row : AuditLogService.getRecentLogs()) {
+                output.println(
+                        "AUDIT_ROW" + TAB
+                                + encode(row[0]) + TAB
+                                + encode(row[1]) + TAB
+                                + encode(row[2]) + TAB
+                                + encode(row[3]) + TAB
+                                + encode(row[4])
+                );
+            }
+
+            output.println("AUDIT_END");
+
+        } catch (SQLException e) {
+            System.err.println(
+                    "Failed to retrieve audit log: " + e.getMessage()
+            );
+            output.println("AUDIT_ERROR\tDatabase error");
+
+        } catch (Exception e) {
+            System.err.println(
+                    "Failed to retrieve audit log: " + e.getMessage()
+            );
+            output.println("AUDIT_ERROR\tServer error");
+        }
+    }
+//helper for audit logs
+
+    private static void recordAudit(
+            int userId,
+            Integer fileId,
+            String action,
+            String description,
+            String result) {
+
+        try {
+            AuditLogService.log(
+                    userId, fileId, action, description, result
+            );
+        } catch (Exception e) {
+            System.err.println(
+                    "Audit logging failed for " + action + ": "
+                            + e.getMessage()
+            );
+        }
+    }
 
     public static void main(String[] args) {
 
@@ -343,10 +414,20 @@ public class Server {
                 allowed = new FileService()
                         .isPublishedResource(fileId);
             }
+
             if (!allowed) {
+                recordAudit(
+                        userId,
+                        fileId,
+                        "DOWNLOAD",
+                        "Access denied for file ID " + fileId,
+                        "FAILED"
+                );
+
                 output.println("DOWNLOAD_ERROR\tAccess denied");
                 return;
             }
+
             System.out.println(
                     "[DOWNLOAD DEBUG] allowed=" + allowed
                             + ", fileId=" + fileId
@@ -382,6 +463,14 @@ public class Server {
             }
 
             output.println("DOWNLOAD_END");
+
+            recordAudit(
+                    userId,
+                    fileId,
+                    "DOWNLOAD",
+                    "File downloaded: " + file.getFileName(),
+                    "SUCCESS"
+            );
 
         } catch (NumberFormatException e) {
             output.println("DOWNLOAD_ERROR\tInvalid file ID");
@@ -553,7 +642,13 @@ public class Server {
 
             if (fileId > 0) {
                 output.println("UPLOAD_OK\t" + fileId);
-
+                recordAudit(
+                        ownerId,
+                        fileId,
+                        "UPLOAD",
+                        "File uploaded: " + fileName,
+                        "SUCCESS"
+                );
                 System.out.println(
                         "File uploaded from client: " + fileName
                 );
@@ -735,7 +830,11 @@ public class Server {
 
                 return;
             }
-
+            //audit logs
+            if (firstMessage.startsWith("GET_AUDIT_LOG" + TAB)) {
+                handleGetAuditLog(firstMessage, output);
+                return;
+            }
             // ==========================================
             // CREATE REQUEST
             // ==========================================
@@ -1682,7 +1781,17 @@ public class Server {
                     );
 
             if (success) {
+                // Record successful file sharing in Audit_Log
+                recordAudit(
+                        sharedBy,
+                        fileId,
+                        "SHARE",
+                        "File shared with user ID " + sharedWith,
+                        "SUCCESS"
+                );
+
                 output.println("SHARE_OK");
+
             } else {
                 output.println(
                         "SHARE_ERROR\tShare rejected"
@@ -1792,7 +1901,13 @@ public class Server {
                     fileId,
                     priority
             );
-
+            recordAudit(
+                    studentId,
+                    fileId,
+                    "SUBMIT",
+                    "File submitted with priority " + priority,
+                    "SUCCESS"
+            );
             if (success) {
                 output.println("SUBMIT_OK");
             } else {

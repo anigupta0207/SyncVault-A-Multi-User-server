@@ -3233,17 +3233,14 @@ public class SyncVaultSwing {
             return p;
         }
 
+
         // =====================================================
         // AUDIT LOG / DEFAULT
         // =====================================================
 
-        JPanel p =
-                whiteCard();
+        JPanel p = whiteCard();
 
-        p.setLayout(
-                new BorderLayout()
-        );
-
+        p.setLayout(new BorderLayout());
 
         p.add(
                 cardHeader(
@@ -3253,50 +3250,58 @@ public class SyncVaultSwing {
                 BorderLayout.NORTH
         );
 
+        Object[][] auditRows;
 
-        p.add(
-                new JScrollPane(
-                        table(
+        try {
+            AuthenticatedUser loggedInUser = Session.getUser();
 
-                                new String[]{
-                                        "TIME",
-                                        "USER",
-                                        "EVENT",
-                                        "RESOURCE",
-                                        "RESULT"
-                                },
+            String role = loggedInUser == null
+                    ? ""
+                    : loggedInUser.getRole();
 
-                                new Object[][]{
+            if (loggedInUser == null
+                    || loggedInUser.getSessionToken() == null
+                    || loggedInUser.getSessionToken().isBlank()
+                    || (!"Admin".equalsIgnoreCase(role)
+                    && !"Teacher".equalsIgnoreCase(role))) {
+                throw new IOException(
+                        "An authorized Admin or Teacher session is required."
+                );
+            }
 
-                                        {
-                                                "12 min ago",
-                                                "Dr. Maya Kim",
-                                                "Shared",
-                                                "OS Unit 3.pdf",
-                                                "Success"
-                                        },
+            List<String[]> records =
+                    new FileClientService().getAuditLogs(
+                            loggedInUser.getSessionToken()
+                    );
 
-                                        {
-                                                "1 hour ago",
-                                                "Animesh Gupta",
-                                                "Uploaded",
-                                                "schema.sql",
-                                                "Success"
-                                        },
+            auditRows = records.toArray(new Object[0][]);
 
-                                        {
-                                                "3 hours ago",
-                                                "Arshita Gupta",
-                                                "Submitted",
-                                                "DBMS Assignment 04",
-                                                "Success"
-                                        }
-                                }
-                        )
-                ),
-                BorderLayout.CENTER
+        } catch (IOException e) {
+            auditRows = new Object[0][5];
+
+            JOptionPane.showMessageDialog(
+                    p,
+                    "Could not load audit records: " + e.getMessage(),
+                    "Audit Log Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+
+        JTable auditTable = table(
+                new String[]{
+                        "TIME",
+                        "USER",
+                        "EVENT",
+                        "RESOURCE",
+                        "RESULT"
+                },
+                auditRows
         );
 
+        p.add(
+                new JScrollPane(auditTable),
+                BorderLayout.CENTER
+        );
 
         return p;
     }
