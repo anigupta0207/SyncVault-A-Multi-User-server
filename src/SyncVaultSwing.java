@@ -1450,6 +1450,7 @@ public class SyncVaultSwing {
         JButton downloadButton = new JButton("↓ Download selected file");
         downloadButton.setFocusPainted(false);
 
+
         JPanel downloadPanel = new JPanel(
                 new FlowLayout(FlowLayout.RIGHT, 12, 10)
         );

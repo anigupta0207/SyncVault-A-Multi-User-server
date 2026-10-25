@@ -472,7 +472,9 @@ public class FileService {
             return false;
         }
     }
-    public boolean deleteFile(int fileId) {
+    public boolean deleteFile(int fileId,
+                              int requesterId,
+                              boolean isAdmin) {
 
         String updateQuery =
                 "UPDATE Files " +

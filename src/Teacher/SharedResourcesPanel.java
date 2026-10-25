@@ -84,12 +84,20 @@ public class SharedResourcesPanel {
 
         JButton downloadButton = new JButton("Download Selected");
         downloadButton.addActionListener(e -> downloadSelected());
+        JButton deleteButton = new JButton("Delete Selected");
+        deleteButton.addActionListener(e -> deleteSelected());
+
+        if (!"Teacher".equalsIgnoreCase(role)) {
+            deleteButton.setVisible(false);
+        }
 
         JPanel footer = new JPanel(
-                new FlowLayout(FlowLayout.RIGHT)
+                new FlowLayout(FlowLayout.RIGHT, 10, 0)
         );
         footer.setOpaque(false);
+
         footer.add(downloadButton);
+        footer.add(deleteButton);
 
         panel.add(footer, BorderLayout.SOUTH);
 
@@ -276,4 +284,71 @@ public class SharedResourcesPanel {
     public JPanel getPanel() {
         return panel;
     }
+
+    private void deleteSelected() {
+        int row = table.getSelectedRow();
+
+        if (row < 0 || row >= resources.size()) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Please select a published resource first.",
+                    "No Resource Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        SharedResource resource = resources.get(row);
+
+        int confirmation = JOptionPane.showConfirmDialog(
+                panel,
+                "Are you sure you want to delete this resource?\n\n"
+                        + resource.getTitle()
+                        + "\nFile: " + resource.getFileName(),
+                "Confirm Deletion",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirmation != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            FileClientService service = new FileClientService();
+
+            boolean success = service.deleteFile(
+                    resource.getFileId(),
+                    sessionToken
+            );
+
+            if (success) {
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "Resource deleted successfully.",
+                        "Deletion Successful",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+                loadResources();
+            } else {
+                JOptionPane.showMessageDialog(
+                        panel,
+                        "Deletion failed. You may not own this file, "
+                                + "or it may already be inactive.",
+                        "Deletion Failed",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(
+                    panel,
+                    "Could not delete resource:\n" + e.getMessage(),
+                    "Deletion Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
 }

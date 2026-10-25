@@ -1124,6 +1124,7 @@ public class Server {
         }
     }
 
+
     private static void handleDeleteFile(
             String message,
             PrintWriter output) {
@@ -1131,18 +1132,14 @@ public class Server {
         try {
             String[] parts = message.split(TAB, -1);
 
-            // 1. Validate request
             if (parts.length != 3) {
                 output.println("DELETE_ERROR\tInvalid request");
                 return;
             }
 
             int fileId = Integer.parseInt(parts[1]);
-
-            // 2. Decode session token
             String token = decode(parts[2]);
 
-            // 3. Authenticate user
             AuthenticatedUser user = SessionManager.getUser(token);
 
             if (user == null) {
@@ -1150,25 +1147,36 @@ public class Server {
                 return;
             }
 
-            // 4. Allow only Admin
-            if (!"Admin".equalsIgnoreCase(user.getRole())) {
-                output.println("DELETE_ERROR\tAdmin access required");
+            String role = user.getRole();
+
+            boolean isAdmin = "Admin".equalsIgnoreCase(role);
+            boolean isTeacher = "Teacher".equalsIgnoreCase(role);
+
+            if (!isAdmin && !isTeacher) {
+                output.println(
+                        "DELETE_ERROR\tAdmin or Teacher access required"
+                );
                 return;
             }
 
-            // 5. Deactivate file in database
             FileService fileService = new FileService();
-            boolean deactivated = fileService.deleteFile(fileId);
+
+            boolean deactivated = fileService.deleteFile(
+                    fileId,
+                    user.getUserId(),
+                    isAdmin
+            );
 
             if (deactivated) {
                 output.println("DELETE_OK");
 
                 System.out.println(
-                        "File deactivated successfully. File ID: " + fileId
+                        role + " marked file deleted. File ID: " + fileId
                 );
             } else {
                 output.println(
-                        "DELETE_ERROR\tFile could not be deactivated"
+                        "DELETE_ERROR\tFile not found, inactive, " +
+                                "or you do not own this file"
                 );
             }
 
@@ -1184,6 +1192,7 @@ public class Server {
             output.println("DELETE_ERROR\tServer error");
         }
     }
+
     private static void handleCreateRequest(
             String message,
             PrintWriter output) {
