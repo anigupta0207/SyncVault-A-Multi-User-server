@@ -228,6 +228,7 @@ public class RequestService {
     // pending -> processing
 
 
+
     public boolean claimRequest(int requestId) {
 
         String query =
@@ -236,48 +237,58 @@ public class RequestService {
                         "WHERE request_id = ? " +
                         "AND status = 'pending'";
 
-        try (
-                Connection conn =
-                        DatabaseConnection.getConnection();
+        for (int attempt = 1;
+             attempt <= db.DeadlockRetry.getMaxAttempts();
+             attempt++) {
 
-                PreparedStatement pstmt =
-                        conn.prepareStatement(query)
-        ) {
+            try (
+                    Connection conn =
+                            DatabaseConnection.getConnection();
+                    PreparedStatement pstmt =
+                            conn.prepareStatement(query)
+            ) {
+                pstmt.setInt(1, requestId);
 
-            pstmt.setInt(1, requestId);
+                int rowsUpdated = pstmt.executeUpdate();
 
-            int rowsUpdated =
-                    pstmt.executeUpdate();
-
-            if (rowsUpdated == 1) {
+                if (rowsUpdated == 1) {
+                    System.out.println(
+                            "Request " + requestId
+                                    + " successfully claimed."
+                    );
+                    return true;
+                }
 
                 System.out.println(
-                        "Request "
-                                + requestId
-                                + " successfully claimed."
+                        "Request " + requestId
+                                + " was already claimed or is no longer pending."
                 );
+                return false;
 
-                return true;
+            } catch (SQLException e) {
+
+                if (db.DeadlockRetry.isDeadlock(e)
+                        && attempt < db.DeadlockRetry.getMaxAttempts()) {
+
+                    System.err.println(
+                            "Deadlock while claiming request "
+                                    + requestId + ". Retrying attempt "
+                                    + (attempt + 1) + "."
+                    );
+
+                    continue;
+                }
+
+                System.err.println(
+                        "Database error while claiming request "
+                                + requestId + "."
+                );
+                e.printStackTrace();
+                return false;
             }
-
-            System.out.println(
-                    "Request "
-                            + requestId
-                            + " was already claimed."
-            );
-
-            return false;
-
-        } catch (SQLException e) {
-
-            System.out.println(
-                    "Database error while claiming request."
-            );
-
-            e.printStackTrace();
-
-            return false;
         }
+
+        return false;
     }
 
 
