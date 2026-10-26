@@ -1,8 +1,6 @@
 
 package audit;
-
 import db.DatabaseConnection;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -71,20 +69,66 @@ public final class AuditLogService {
                         "LIMIT 200";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                logs.add(new String[]{
-                        rs.getString("timestamp"),
-                        rs.getString("user_name"),
-                        rs.getString("action_type"),
-                        rs.getString("resource"),
-                        rs.getString("result")
-                });
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    logs.add(new String[]{
+                            rs.getString("timestamp"),
+                            rs.getString("user_name"),
+                            rs.getString("action_type"),
+                            rs.getString("resource"),
+                            rs.getString("result")
+                    });
+                }
             }
         }
 
         return logs;
     }
+
+    public static List<String[]> getLogsForUser(int userId)
+            throws SQLException {
+
+        if (userId <= 0) {
+            throw new IllegalArgumentException("Invalid user ID.");
+        }
+
+        List<String[]> logs = new ArrayList<>();
+
+        String sql =
+                "SELECT a.log_id, a.timestamp, " +
+                        "COALESCE(u.name, CONCAT('User #', a.user_id)) AS user_name, " +
+                        "a.action_type, " +
+                        "COALESCE(f.file_name, a.description, '-') AS resource, " +
+                        "a.result " +
+                        "FROM Audit_Log a " +
+                        "LEFT JOIN Users u ON u.user_id = a.user_id " +
+                        "LEFT JOIN Files f ON f.file_id = a.file_id " +
+                        "WHERE a.user_id = ? " +
+                        "ORDER BY a.timestamp DESC, a.log_id DESC " +
+                        "LIMIT 200";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    logs.add(new String[]{
+                            rs.getString("timestamp"),
+                            rs.getString("user_name"),
+                            rs.getString("action_type"),
+                            rs.getString("resource"),
+                            rs.getString("result")
+                    });
+                }
+            }
+        }
+
+        return logs;
+    }
+
 }

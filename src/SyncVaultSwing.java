@@ -3256,6 +3256,7 @@ public class SyncVaultSwing {
         try {
             AuthenticatedUser loggedInUser = Session.getUser();
 
+
             String role = loggedInUser == null
                     ? ""
                     : loggedInUser.getRole();
@@ -3264,11 +3265,13 @@ public class SyncVaultSwing {
                     || loggedInUser.getSessionToken() == null
                     || loggedInUser.getSessionToken().isBlank()
                     || (!"Admin".equalsIgnoreCase(role)
-                    && !"Teacher".equalsIgnoreCase(role))) {
+                    && !"Teacher".equalsIgnoreCase(role)
+                    && !"Student".equalsIgnoreCase(role))) {
                 throw new IOException(
-                        "An authorized Admin or Teacher session is required."
+                        "An authenticated Admin, Teacher, or Student session is required."
                 );
             }
+
 
             List<String[]> records =
                     new FileClientService().getAuditLogs(

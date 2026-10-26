@@ -40,6 +40,7 @@ public class Server {
             String.valueOf('\t');
 
 
+
     private static void handleGetAuditLog(
             String message,
             PrintWriter output) {
@@ -55,16 +56,37 @@ public class Server {
             String token = decode(parts[1]);
             AuthenticatedUser user = SessionManager.getUser(token);
 
-            String role = user == null ? "" : user.getRole();
-
-            if (user == null ||
-                    (!"Admin".equalsIgnoreCase(role)
-                            && !"Teacher".equalsIgnoreCase(role))) {
+            if (user == null) {
                 output.println("AUDIT_ERROR\tUnauthorized");
                 return;
             }
 
-            for (String[] row : AuditLogService.getRecentLogs()) {
+            String role = user.getRole();
+
+            if (role == null) {
+                output.println("AUDIT_ERROR\tUnauthorized");
+                return;
+            }
+
+            List<String[]> logs;
+
+            if ("Admin".equalsIgnoreCase(role)
+                    || "Teacher".equalsIgnoreCase(role)) {
+
+                // Admin and Teacher retain access to all recent logs.
+                logs = AuditLogService.getRecentLogs();
+
+            } else if ("Student".equalsIgnoreCase(role)) {
+
+                // Student can access only records attributed to their user ID.
+                logs = AuditLogService.getLogsForUser(user.getUserId());
+
+            } else {
+                output.println("AUDIT_ERROR\tUnauthorized");
+                return;
+            }
+
+            for (String[] row : logs) {
                 output.println(
                         "AUDIT_ROW" + TAB
                                 + encode(row[0]) + TAB
@@ -90,6 +112,7 @@ public class Server {
             output.println("AUDIT_ERROR\tServer error");
         }
     }
+
 //helper for audit logs
 
     private static void recordAudit(
